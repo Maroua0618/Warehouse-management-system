@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/button.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -16,33 +17,6 @@ class OnboardingScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 16),
 
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.warehouse,
-                      color: AppColors.textOnPrimary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'BMS WMS',
-                    style: AppTextStyles.cardTitle.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-
-              const Spacer(),
-
               // Warehouse illustration with efficiency badge
               Stack(
                 clipBehavior: Clip.none,
@@ -50,7 +24,7 @@ class OnboardingScreen extends StatelessWidget {
                   // Main warehouse container
                   Image.asset(
                     'assets/Container.png',
-                    height: 220,
+                    height: 300,
                     fit: BoxFit.contain,
                   ),
                 ],
@@ -70,7 +44,10 @@ class OnboardingScreen extends StatelessWidget {
                     const TextSpan(text: 'Gestion Intelligente\n'),
                     TextSpan(
                       text: 'd\'Entrepôt',
-                      style: TextStyle(color: AppColors.primary),
+                      style: AppTextStyles.hero.copyWith(
+                        color: AppColors.primary,
+                        height: 1.2,
+                      ),
                     ),
                   ],
                 ),
@@ -128,57 +105,6 @@ class OnboardingScreen extends StatelessWidget {
               const SizedBox(height: 24),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// Reusable Primary Button Component
-class PrimaryButton extends StatelessWidget {
-  final String text;
-  final IconData? icon;
-  final VoidCallback onPressed;
-  final Color? backgroundColor;
-  final Color? textColor;
-  final double? height;
-  final double? borderRadius;
-
-  const PrimaryButton({
-    super.key,
-    required this.text,
-    this.icon,
-    required this.onPressed,
-    this.backgroundColor,
-    this.textColor,
-    this.height,
-    this.borderRadius,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: height ?? 52,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.primary,
-          foregroundColor: textColor ?? AppColors.textOnPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius ?? 12),
-          ),
-          elevation: 0,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(text, style: AppTextStyles.button),
-            if (icon != null) ...[
-              const SizedBox(width: 8),
-              Icon(icon, size: 20),
-            ],
-          ],
         ),
       ),
     );

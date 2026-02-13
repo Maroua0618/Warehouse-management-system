@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 
 /// Reusable Primary Button Component
 ///
@@ -15,9 +17,8 @@ import 'package:flutter/material.dart';
 class PrimaryButton extends StatelessWidget {
   final String text;
   final IconData? icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color? backgroundColor;
-  final Color? textColor;
   final double? height;
   final double? borderRadius;
   final bool isLoading;
@@ -28,7 +29,6 @@ class PrimaryButton extends StatelessWidget {
     this.icon,
     required this.onPressed,
     this.backgroundColor,
-    this.textColor,
     this.height,
     this.borderRadius,
     this.isLoading = false,
@@ -42,22 +42,24 @@ class PrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? const Color(0xFF0A6E85),
-          foregroundColor: textColor ?? Colors.white,
+          backgroundColor: backgroundColor ?? AppColors.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.textSecondary.withOpacity(0.3),
+          disabledForegroundColor: AppColors.textSecondary.withOpacity(0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius ?? 12),
           ),
           elevation: 0,
-          disabledBackgroundColor: (backgroundColor ?? const Color(0xFF0A6E85))
-              .withOpacity(0.6),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.white.withOpacity(0.5),
+                  ),
                 ),
               )
             : Row(
@@ -65,10 +67,7 @@ class PrimaryButton extends StatelessWidget {
                 children: [
                   Text(
                     text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.button.copyWith(color: Colors.white),
                   ),
                   if (icon != null) ...[
                     const SizedBox(width: 8),
@@ -95,11 +94,11 @@ class PrimaryButton extends StatelessWidget {
 class SecondaryButton extends StatelessWidget {
   final String text;
   final IconData? icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color? borderColor;
-  final Color? textColor;
   final double? height;
   final double? borderRadius;
+  final bool isLoading;
 
   const SecondaryButton({
     super.key,
@@ -107,41 +106,61 @@ class SecondaryButton extends StatelessWidget {
     this.icon,
     required this.onPressed,
     this.borderColor,
-    this.textColor,
     this.height,
     this.borderRadius,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBorderColor = borderColor ?? const Color(0xFF0A6E85);
-    final effectiveTextColor = textColor ?? const Color(0xFF0A6E85);
+    final effectiveBorderColor = borderColor ?? AppColors.primary;
 
     return SizedBox(
       width: double.infinity,
       height: height ?? 52,
       child: OutlinedButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: effectiveTextColor,
-          side: BorderSide(color: effectiveBorderColor, width: 1.5),
+          foregroundColor: AppColors.primary,
+          disabledForegroundColor: AppColors.textSecondary.withOpacity(0.5),
+          side: BorderSide(
+            color: onPressed == null
+                ? AppColors.textSecondary.withOpacity(0.3)
+                : effectiveBorderColor,
+            width: 2,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius ?? 12),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              text,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            if (icon != null) ...[
-              const SizedBox(width: 8),
-              Icon(icon, size: 20),
-            ],
-          ],
-        ),
+        child: isLoading
+            ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.primary.withOpacity(0.5),
+                  ),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    text,
+                    style: AppTextStyles.button.copyWith(
+                      color: onPressed == null
+                          ? AppColors.textSecondary.withOpacity(0.5)
+                          : AppColors.primary,
+                    ),
+                  ),
+                  if (icon != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(icon, size: 20),
+                  ],
+                ],
+              ),
       ),
     );
   }
@@ -177,7 +196,7 @@ class IconButtonWithBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: backgroundColor ?? const Color(0xFF0A6E85),
+      color: backgroundColor ?? AppColors.primary,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onPressed,
