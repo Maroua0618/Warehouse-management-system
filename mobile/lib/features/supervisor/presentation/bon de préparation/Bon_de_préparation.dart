@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../widgets/bottom_nav_bar.dart';
-import 'supervisor_dashboard.dart';
-import 'calendar.dart';
+import '../pages/supervisor_dashboard.dart';
+import '../pages/calendar.dart';
 
 class PreparationSlipsScreen extends StatelessWidget {
   const PreparationSlipsScreen({Key? key}) : super(key: key);

@@ -4,7 +4,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'operational_issues.dart';
 import 'calendar.dart';
-import 'Bon_de_préparation.dart';
+import '../bon de préparation/Bon_de_préparation.dart';
 import '../../data/repositories/supervisor_repository.dart';
 import '../../data/models/supervisor_models.dart';
 

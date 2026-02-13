@@ -5,7 +5,8 @@ import '../widgets/bottom_nav_bar.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import 'supervisor_dashboard.dart';
-import 'Bon_de_préparation.dart';
+import '../bon de préparation/Bon_de_préparation.dart';
+import '../bon de commande/bon_de_commande_screen.dart';
 
 class AIDecisionsEmptyScreen extends StatefulWidget {
   const AIDecisionsEmptyScreen({Key? key}) : super(key: key);
@@ -99,7 +100,13 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
             count: 2,
             color: const Color(0xFF0891B2),
             onTap: () {
-              // Navigate to purchase orders
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      BonDeCommandeScreen(selectedDate: selectedDate),
+                ),
+              );
             },
           ),
           const SizedBox(height: 12),
