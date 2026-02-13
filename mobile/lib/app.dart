@@ -12,6 +12,9 @@ class App extends StatelessWidget {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.theme,
+      initialRoute: AppRoutes.initialRoute,
+      routes: AppRoutes.routes,
     );
   }
 }
