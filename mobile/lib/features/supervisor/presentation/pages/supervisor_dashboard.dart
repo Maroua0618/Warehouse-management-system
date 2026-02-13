@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-final supabase = Supabase.instance.client;
+import '../../../../core/config/supabase_config.dart';
 
 class SupervisorDashboard extends StatefulWidget {
   const SupervisorDashboard({super.key});
@@ -24,10 +22,18 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     try {
       final userId = supabase.auth.currentUser!.id;
       final profile = await supabase
-          .from('user_profiles')
+          .from('users')
           .select('name')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      if (profile == null) {
+        setState(() {
+          _userName = 'Utilisateur';
+          _isLoading = false;
+        });
+        return;
+      }
 
       setState(() {
         _userName = profile['name'] as String;
@@ -167,10 +173,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                   // Quick Actions
                   const Text(
                     'Management',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
 
@@ -239,18 +242,12 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),

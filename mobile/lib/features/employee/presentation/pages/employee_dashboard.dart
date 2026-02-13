@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-final supabase = Supabase.instance.client;
+import '../../../../core/config/supabase_config.dart';
 
 class EmployeeDashboard extends StatefulWidget {
   const EmployeeDashboard({super.key});
@@ -24,10 +22,18 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     try {
       final userId = supabase.auth.currentUser!.id;
       final profile = await supabase
-          .from('user_profiles')
+          .from('users')
           .select('name')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      if (profile == null) {
+        setState(() {
+          _userName = 'Utilisateur';
+          _isLoading = false;
+        });
+        return;
+      }
 
       setState(() {
         _userName = profile['name'] as String;
@@ -143,10 +149,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                   // Quick Actions
                   const Text(
                     'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
 

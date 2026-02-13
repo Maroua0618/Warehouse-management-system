@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/config/supabase_config.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/button.dart';
-
-final supabase = Supabase.instance.client;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -40,13 +38,34 @@ class _LoginPageState extends State<LoginPage> {
 
         // Get user role from profile
         final userId = supabase.auth.currentUser!.id;
+        print('DEBUG: Looking for user with ID: $userId');
+
         final profile = await supabase
-            .from('user_profiles')
+            .from('users')
             .select('role')
             .eq('id', userId)
-            .single();
+            .maybeSingle();
 
-        final role = profile['role'] as String;
+        print('DEBUG: Profile result: $profile');
+
+        if (profile == null) {
+          // User doesn't have a profile in the users table
+          await supabase.auth.signOut();
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Profil utilisateur non trouvé. Contactez l\'administrateur.',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        final role = (profile['role'] as String).toLowerCase();
 
         if (mounted) {
           setState(() => _isLoading = false);
