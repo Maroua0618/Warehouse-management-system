@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -8,19 +10,19 @@ import {
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
-  { name: 'Users', href: '/users', icon: Users },
-  { name: 'Warehouses', href: '/warehouses', icon: Warehouse },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Overrides', href: '/overrides', icon: ShieldAlert },
-  { name: 'Audit Logs', href: '/audit-logs', icon: ClipboardList },
-  { name: 'Inventory', href: '/inventory', icon: Box },
+  { name: 'Users', href: '/dashboard/users', icon: Users },
+  { name: 'Warehouses', href: '/dashboard/warehouses', icon: Warehouse },
+  { name: 'Products', href: '/dashboard/products', icon: Package },
+  { name: 'Overrides', href: '/dashboard/overrides', icon: ShieldAlert },
+  { name: 'Audit Logs', href: '/dashboard/audit-logs', icon: ClipboardList },
+  // { name: 'Inventory', href: '/dashboard/inventory', icon: Box },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 min-h-screen bg-[#08677A] flex flex-col text-white">
+    <aside className="fixed top-0 left-0 w-64 h-screen bg-[#08677A] flex flex-col text-white z-50 overflow-y-auto">
       {/* Brand Header */}
       <div className="p-6 mb-4">
         <div className="flex items-center gap-3">
@@ -58,11 +60,8 @@ export default function Sidebar() {
       {/* Footer Logo */}
       <div className="p-6">
         <div className="flex items-center gap-2 opacity-90">
-            <img src="/logo.png" alt="BMS Electric Logo" className="h-10 w-auto" />
-            <div className="flex items-baseline gap-1">
-            <span className="font-space-grotesk font-bold text-2xl italic tracking-tighter text-[#F9A825]">BMS</span>
-            <span className="font-inter text-[8px] font-bold uppercase tracking-widest text-white">Electric</span>
-            </div>
+          <img src="/logo.png" alt="BMS Electric Logo" className="h-10 w-auto" />
+          
         </div>
       </div>
     </aside>

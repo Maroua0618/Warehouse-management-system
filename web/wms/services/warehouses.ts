@@ -12,6 +12,71 @@ export type WarehouseWithSummary = Warehouse & {
   locations_count: number;
 };
 
+export interface CreateWarehouseDto {
+  code: string;
+  name: string;
+}
+
+export interface UpdateWarehouseDto {
+  code: string;
+  name: string;
+}
+
+export const warehouseService = {
+  async getAll(): Promise<Warehouse[]> {
+    const response = await fetch('/api/warehouses');
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result.data;
+  },
+
+  async getAllWithSummary(): Promise<WarehouseWithSummary[]> {
+    const response = await fetch('/api/warehouses/summary');
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result.data;
+  },
+
+  async getById(id: string): Promise<Warehouse> {
+    const response = await fetch(`/api/warehouses/${id}`);
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result.data;
+  },
+
+  async create(dto: CreateWarehouseDto): Promise<Warehouse> {
+    const response = await fetch('/api/warehouses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result.data;
+  },
+
+  async update(id: string, dto: UpdateWarehouseDto): Promise<Warehouse> {
+    const response = await fetch(`/api/warehouses/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`/api/warehouses/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error);
+    }
+  },
+};
+
 // ═════════════════════════════════════════════════════════
 //  CRUD OPERATIONS
 // ═════════════════════════════════════════════════════════
