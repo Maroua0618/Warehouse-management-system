@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 /// Local SQLite database manager for the BMS application.
 class LocalDatabase {
   static Database? _database;
-  static const int _version = 2;
+  static const int _version = 3;
   static const String _dbName = 'bms_database.db';
 
   /// Get database instance (singleton)
@@ -482,12 +482,20 @@ class LocalDatabase {
       await db.insert('locations', loc);
     }
 
-    // Insert sample user (employee)
+    // Insert sample users
     await db.insert('users', {
-      'username': 'employee1',
-      'password_hash': 'hashed_password',
+      'username': 'employee',
+      'password_hash': 'employee123',
       'full_name': 'Jean Dupont',
       'role_id': 1,
+      'status': 'active',
+    });
+
+    await db.insert('users', {
+      'username': 'supervisor',
+      'password_hash': 'supervisor123',
+      'full_name': 'Marie Martin',
+      'role_id': 2,
       'status': 'active',
     });
   }
@@ -503,6 +511,26 @@ class LocalDatabase {
       await db.execute('ALTER TABLE commands ADD COLUMN order_number TEXT');
       await db.execute('ALTER TABLE commands ADD COLUMN location TEXT');
       await db.execute('ALTER TABLE commands ADD COLUMN scheduled_time TEXT');
+    }
+
+    // Migration from version 2 to 3: Add sample users (employee & supervisor)
+    if (oldVersion < 3) {
+      // Clear existing users and add new sample users
+      await db.delete('users');
+      await db.insert('users', {
+        'username': 'employee',
+        'password_hash': 'employee123',
+        'full_name': 'Jean Dupont',
+        'role_id': 1,
+        'status': 'active',
+      });
+      await db.insert('users', {
+        'username': 'supervisor',
+        'password_hash': 'supervisor123',
+        'full_name': 'Marie Martin',
+        'role_id': 2,
+        'status': 'active',
+      });
     }
   }
 

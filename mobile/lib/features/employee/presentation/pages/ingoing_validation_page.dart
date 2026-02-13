@@ -25,11 +25,15 @@ class _IngoingValidationPageState extends State<IngoingValidationPage> {
   // State for product validation checkboxes
   bool _isQuantityValidated = false;
   bool _isProductTypeValidated = false;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    context.read<MockIngoingValidationCubit>().loadValidation(widget.orderId);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      context.read<MockIngoingValidationCubit>().loadValidation(widget.orderId);
+    }
   }
 
   @override
