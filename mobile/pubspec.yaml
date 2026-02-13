@@ -1,7 +1,7 @@
 name: mobile
-description: "A new Flutter project."
-publish_to: 'none'
-version: 0.1.0
+description: "MobAI Warehouse Management System - Mobile Application"
+publish_to: "none"
+version: 1.0.0
 
 environment:
   sdk: ^3.10.3
@@ -9,11 +9,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  shared_preferences: ^2.2.2
+
+  # State Management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
+
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
