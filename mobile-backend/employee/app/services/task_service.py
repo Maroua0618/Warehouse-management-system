@@ -101,7 +101,8 @@ class TaskService:
             chariot_info = ChariotInfo(
                 id=task["chariot"]["id"],
                 code=task["chariot"]["code"],
-                is_active=task["chariot"]["is_active"]
+                is_active=task["chariot"]["is_active"],
+                capacity=task["chariot"].get("capacity")
             )
         
         # Build route info

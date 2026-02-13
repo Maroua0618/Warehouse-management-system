@@ -37,6 +37,7 @@ class ChariotInfo(BaseModel):
     id: str
     code: str
     is_active: bool
+    capacity: Optional[int] = None
 
 
 class RouteNode(BaseModel):
