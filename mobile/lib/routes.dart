@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'features/shared/presentation/pages/splash.dart';
 import 'features/shared/presentation/pages/onboarding.dart';
 import 'features/shared/presentation/pages/login.dart';
-import 'features/employee/presentation/pages/employee.dart';
-import 'features/supervisor/presentation/pages/supervisor.dart';
+import 'features/employee/presentation/pages/employee_dashboard.dart';
+import 'features/supervisor/presentation/pages/supervisor_dashboard.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -17,10 +17,11 @@ class AppRoutes {
       splash: (context) => const SplashScreen(),
       onboarding: (context) => const OnboardingScreen(),
       login: (context) => const LoginPage(),
-      employee: (context) => const EmployeeScreen(),
-      supervisor: (context) => const SupervisorScreen(),
+      employee: (context) => const EmployeeDashboard(),
+      supervisor: (context) => const SupervisorDashboardScreen(),
     };
   }
 
-  static String get initialRoute => splash;
+  static String get initialRoute =>
+      splash; // Change this to splash or onboarding as needed
 }
