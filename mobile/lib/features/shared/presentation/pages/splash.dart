@@ -57,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen>
               const Spacer(flex: 3),
 
               // Logo
-              Image.asset('assets/Logo_BMS.png', height: 100, width: 180),
+              Image.asset('assets/Logo_BMS.png', height: 180, width: 300),
 
               const SizedBox(height: 12),
 
@@ -66,7 +66,8 @@ class _SplashScreenState extends State<SplashScreen>
                 'SYSTÈME DE GESTION\nD\'ENTREPÔT',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.textOnPrimary,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                   letterSpacing: 2,
                   height: 1.6,
                 ),
@@ -119,9 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
                               Text(
                                 '${(_animation.value * 100).toInt()}%',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.textOnPrimary.withOpacity(
-                                    0.6,
-                                  ),
+                                  color: Colors.white.withOpacity(0.6),
                                   fontSize: 10,
                                   letterSpacing: 1,
                                 ),
