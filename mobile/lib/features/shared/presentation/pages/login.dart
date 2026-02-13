@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/button.dart';
+
+final supabase = Supabase.instance.client;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -28,17 +31,54 @@ class _LoginPageState extends State<LoginPage> {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
 
-      // Simulate login API call
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        // Sign in with Supabase
+        await supabase.auth.signInWithPassword(
+          email: _usernameController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      setState(() => _isLoading = false);
+        // Get user role from profile
+        final userId = supabase.auth.currentUser!.id;
+        final profile = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', userId)
+            .single();
 
-      // Add your login logic here
-      // Example: Navigate to home page on success
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Connexion réussie !')));
+        final role = profile['role'] as String;
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+
+          // Navigate based on role
+          if (role == 'employee') {
+            // Navigate to employee dashboard
+            Navigator.pushReplacementNamed(context, '/employee');
+          } else if (role == 'supervisor') {
+            // Navigate to supervisor dashboard
+            Navigator.pushReplacementNamed(context, '/supervisor');
+          } else {
+            // Admin or other roles not allowed here
+            await supabase.auth.signOut();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Accès non autorisé'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur de connexion: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
