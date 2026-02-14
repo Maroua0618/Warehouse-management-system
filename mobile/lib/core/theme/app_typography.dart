@@ -31,7 +31,7 @@ class AppTextStyles {
 
   // Card Title
   static TextStyle get cardTitle =>
-      GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600);
+      GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600);
 
   // Body Text
   static TextStyle get bodyLarge =>

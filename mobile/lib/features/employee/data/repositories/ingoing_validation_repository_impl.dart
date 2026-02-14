@@ -2,11 +2,10 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/network_info.dart';
-import '../../domain/entities/ingoing_validation_entity.dart';
+import '../../domain/entities/command_entity.dart';
 import '../../domain/repositories/ingoing_validation_repository.dart';
 import '../datasources/ingoing_validation_local_datasource.dart';
 import '../datasources/ingoing_validation_remote_datasource.dart';
-import '../models/ingoing_validation_model.dart';
 
 /// Implementation of IngoingValidationRepository.
 /// Coordinates between remote and local data sources.
@@ -22,38 +21,32 @@ class IngoingValidationRepositoryImpl implements IngoingValidationRepository {
   });
 
   @override
-  Future<Either<Failure, IngoingValidationEntity>> getValidation(
-    String orderId,
-  ) async {
+  Future<Either<Failure, CommandEntity>> getValidation(String orderId) async {
     if (await networkInfo.isConnected) {
       try {
         final remoteValidation = await remoteDataSource.getValidation(orderId);
-        await localDataSource.cacheValidation(remoteValidation);
+        // TODO: Caching logic might need to be updated for CommandEntity
+        // await localDataSource.cacheValidation(remoteValidation as IngoingValidationModel);
         return Right(remoteValidation);
       } on ServerException catch (e) {
         return Left(ServerFailure(e.message));
       }
     } else {
-      try {
-        final localValidation = await localDataSource.getValidation(orderId);
-        return Right(localValidation);
-      } on CacheException catch (e) {
-        return Left(CacheFailure(e.message));
-      }
+      // TODO: Local data source logic for CommandEntity
+      return const Left(NetworkFailure('No internet connection'));
     }
   }
 
   @override
-  Future<Either<Failure, IngoingValidationEntity>> validateProduct(
-    String orderId,
-  ) async {
+  Future<Either<Failure, CommandEntity>> validateProduct(String orderId) async {
     if (!await networkInfo.isConnected) {
       return const Left(NetworkFailure('Pas de connexion internet'));
     }
 
     try {
       final updatedValidation = await remoteDataSource.validateProduct(orderId);
-      await localDataSource.updateValidation(updatedValidation);
+      // TODO: Caching logic might need to be updated for CommandEntity
+      // await localDataSource.updateValidation(updatedValidation);
       return Right(updatedValidation);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -61,7 +54,27 @@ class IngoingValidationRepositoryImpl implements IngoingValidationRepository {
   }
 
   @override
-  Future<Either<Failure, IngoingValidationEntity>> validateItem(
+  Future<Either<Failure, CommandEntity>> validateTask(
+    String orderId, {
+    List<String>? validatedItems,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure('Pas de connexion internet'));
+    }
+
+    try {
+      final updatedValidation = await remoteDataSource.validateTask(
+        orderId,
+        validatedItems: validatedItems,
+      );
+      return Right(updatedValidation);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, CommandEntity>> validateItem(
     String orderId,
     String itemId,
     String pathStepId,
@@ -76,7 +89,8 @@ class IngoingValidationRepositoryImpl implements IngoingValidationRepository {
         itemId,
         pathStepId,
       );
-      await localDataSource.updateValidation(updatedValidation);
+      // TODO: Caching logic might need to be updated for CommandEntity
+      // await localDataSource.updateValidation(updatedValidation);
       return Right(updatedValidation);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -86,6 +100,7 @@ class IngoingValidationRepositoryImpl implements IngoingValidationRepository {
   @override
   Future<Either<Failure, bool>> reportProblem(
     String orderId,
+    String category,
     String description,
   ) async {
     if (!await networkInfo.isConnected) {
@@ -93,7 +108,11 @@ class IngoingValidationRepositoryImpl implements IngoingValidationRepository {
     }
 
     try {
-      final result = await remoteDataSource.reportProblem(orderId, description);
+      final result = await remoteDataSource.reportProblem(
+        orderId,
+        category,
+        description,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -117,28 +136,18 @@ class IngoingValidationRepositoryImpl implements IngoingValidationRepository {
     }
   }
 
+  // TODO: Implement caching and local data source logic
   @override
   Future<Either<Failure, void>> cacheValidation(
-    IngoingValidationEntity validation,
+    CommandEntity validation,
   ) async {
-    try {
-      final model = IngoingValidationModel.fromEntity(validation);
-      await localDataSource.cacheValidation(model);
-      return const Right(null);
-    } on CacheException catch (e) {
-      return Left(CacheFailure(e.message));
-    }
+    return const Right(null);
   }
 
   @override
-  Future<Either<Failure, IngoingValidationEntity>> getCachedValidation(
+  Future<Either<Failure, CommandEntity>> getCachedValidation(
     String orderId,
   ) async {
-    try {
-      final validation = await localDataSource.getValidation(orderId);
-      return Right(validation);
-    } on CacheException catch (e) {
-      return Left(CacheFailure(e.message));
-    }
+    return const Left(CacheFailure('Not implemented'));
   }
 }

@@ -6,17 +6,38 @@ from passlib.context import CryptContext
 from app.config import get_settings
 
 settings = get_settings()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Use a simpler password context to avoid bcrypt version issues
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256"], 
+    deprecated="auto",
+    pbkdf2_sha256__default_rounds=29000
+)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        # Truncate password to 72 bytes if needed 
+        if len(plain_password.encode('utf-8')) > 72:
+            plain_password = plain_password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+        
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password."""
-    return pwd_context.hash(password)
+    try:
+        # Truncate password to 72 bytes if needed
+        if len(password.encode('utf-8')) > 72:
+            password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+        return pwd_context.hash(password)
+    except Exception as e:
+        print(f"Password hashing error: {e}")
+        raise
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

@@ -12,9 +12,20 @@ import 'features/employee/domain/repositories/order_repository.dart';
 import 'features/employee/logic/cubit.dart';
 import 'features/employee/presentation/cubit/order_cubit.dart';
 import 'features/shared/data/datasources/auth_local_datasource.dart';
+import 'features/shared/data/datasources/auth_remote_datasource.dart';
 import 'features/shared/data/repositories/auth_repository_impl.dart';
 import 'features/shared/domain/repositories/auth_repository.dart';
 import 'features/shared/presentation/cubit/auth_cubit.dart';
+import 'features/shared/presentation/cubit/auth_state.dart';
+import 'features/employee/data/datasources/ingoing_validation_local_datasource.dart';
+import 'features/employee/data/datasources/ingoing_validation_remote_datasource.dart';
+import 'features/employee/data/repositories/ingoing_validation_repository_impl.dart';
+import 'features/employee/domain/repositories/ingoing_validation_repository.dart';
+import 'features/employee/presentation/cubit/ingoing_validation_cubit.dart';
+import 'features/employee/data/datasources/outgoing_execution_remote_datasource.dart';
+import 'features/employee/data/repositories/outgoing_execution_repository_impl.dart';
+import 'features/employee/domain/repositories/outgoing_execution_repository.dart';
+import 'features/employee/presentation/cubit/outgoing_execution_cubit.dart';
 
 /// Global service locator instance.
 final sl = GetIt.instance;
@@ -44,7 +55,26 @@ Future<void> initDependencies() async {
       ),
     );
 
-    // Add interceptors for logging, auth, etc.
+    // Add auth interceptor to inject Bearer token
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          // Get auth token from AuthCubit if available
+          if (sl.isRegistered<AuthCubit>()) {
+            final authState = sl<AuthCubit>().state;
+            if (authState is AuthAuthenticated) {
+              final token = authState.user.backendToken;
+              if (token != null) {
+                options.headers['Authorization'] = 'Bearer $token';
+              }
+            }
+          }
+          return handler.next(options);
+        },
+      ),
+    );
+
+    // Add interceptors for logging
     dio.interceptors.add(
       LogInterceptor(
         requestBody: true,
@@ -91,16 +121,21 @@ Future<void> initDependencies() async {
     () => AuthLocalDataSourceImpl(),
   );
 
+  sl.registerLazySingleton<AuthRemoteDataSource>(
+    () => AuthRemoteDataSourceImpl(),
+  );
+
   // Repository
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       localDataSource: sl<AuthLocalDataSource>(),
-      useLocalOnly: true, // Always use local database for now
+      remoteDataSource: sl<AuthRemoteDataSource>(),
+      useRemote: true, // Use remote backend API
     ),
   );
 
-  // Cubit (Factory - new instance each time)
-  sl.registerFactory<AuthCubit>(
+  // Cubit (Singleton - shared instance across app to preserve auth state)
+  sl.registerLazySingleton<AuthCubit>(
     () => AuthCubit(authRepository: sl<AuthRepository>()),
   );
 
@@ -113,10 +148,54 @@ Future<void> initDependencies() async {
 
   // Cubit (Factory - takes userId parameter)
   // Default to userId 1 (employee user from sample data)
-  sl.registerFactoryParam<EmployeeCubit, int, void>(
-    (userId, _) => EmployeeCubit(
+  sl.registerFactory<EmployeeCubit>(
+    () => EmployeeCubit(
       datasource: sl<EmployeeLocalDatasource>(),
-      currentUserId: userId,
+      authCubit: sl<AuthCubit>(),
     ),
+  );
+
+  // ==================== Features - Ingoing Validation ====================
+
+  // Data Sources
+  sl.registerLazySingleton<IngoingValidationRemoteDataSource>(
+    () => IngoingValidationRemoteDataSourceImpl(dio: sl<Dio>()),
+  );
+  sl.registerLazySingleton<IngoingValidationLocalDataSource>(
+    () => IngoingValidationLocalDataSourceStub(),
+  );
+
+  // Repository
+  sl.registerLazySingleton<IngoingValidationRepository>(
+    () => IngoingValidationRepositoryImpl(
+      remoteDataSource: sl<IngoingValidationRemoteDataSource>(),
+      localDataSource: sl<IngoingValidationLocalDataSource>(),
+      networkInfo: sl<NetworkInfo>(),
+    ),
+  );
+
+  // Cubit
+  sl.registerFactory<IngoingValidationCubit>(
+    () => IngoingValidationCubit(repository: sl<IngoingValidationRepository>()),
+  );
+
+  // ==================== Features - Outgoing Execution ====================
+
+  // Data Sources
+  sl.registerLazySingleton<OutgoingExecutionRemoteDataSource>(
+    () => OutgoingExecutionRemoteDataSourceImpl(dio: sl<Dio>()),
+  );
+
+  // Repository
+  sl.registerLazySingleton<OutgoingExecutionRepository>(
+    () => OutgoingExecutionRepositoryImpl(
+      remoteDataSource: sl<OutgoingExecutionRemoteDataSource>(),
+      networkInfo: sl<NetworkInfo>(),
+    ),
+  );
+
+  // Cubit
+  sl.registerFactory<OutgoingExecutionCubit>(
+    () => OutgoingExecutionCubit(repository: sl<OutgoingExecutionRepository>()),
   );
 }

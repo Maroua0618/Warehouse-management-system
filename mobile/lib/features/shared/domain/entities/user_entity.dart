@@ -2,50 +2,53 @@ import 'package:equatable/equatable.dart';
 
 /// Domain entity representing a user in the system.
 class UserEntity extends Equatable {
-  final int userId;
-  final String username;
+  final String userId;
+  final String email;
   final String fullName;
-  final int roleId;
+  final String role;
   final String status;
-  final DateTime? lastLogin;
-  final DateTime createdAt;
+  final String? backendToken;
+  final String? supabaseToken;
 
   const UserEntity({
     required this.userId,
-    required this.username,
+    required this.email,
     required this.fullName,
-    required this.roleId,
+    required this.role,
     required this.status,
-    this.lastLogin,
-    required this.createdAt,
+    this.backendToken,
+    this.supabaseToken,
   });
 
-  /// Returns the role name based on roleId
-  String get roleName {
-    switch (roleId) {
-      case 1:
-        return 'employee';
-      case 2:
-        return 'supervisor';
-      default:
-        return 'unknown';
-    }
-  }
+  /// Returns the role name (already a string)
+  String get roleName => role.toLowerCase();
 
   /// Check if user is an employee
-  bool get isEmployee => roleId == 1;
+  bool get isEmployee => role.toUpperCase() == 'EMPLOYEE';
 
   /// Check if user is a supervisor
-  bool get isSupervisor => roleId == 2;
+  bool get isSupervisor => role.toUpperCase() == 'SUPERVISOR';
+
+  /// Backward compatibility - username is email
+  String get username => email;
+
+  /// Get initials from full name
+  String get initials {
+    final parts = fullName.trim().split(' ');
+    if (parts.isEmpty) return '';
+    if (parts.length == 1)
+      return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '';
+    return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+  }
 
   @override
   List<Object?> get props => [
     userId,
-    username,
+    email,
     fullName,
-    roleId,
+    role,
     status,
-    lastLogin,
-    createdAt,
+    backendToken,
+    supabaseToken,
   ];
 }

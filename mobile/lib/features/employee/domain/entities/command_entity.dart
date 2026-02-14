@@ -15,6 +15,7 @@ enum CommandType {
 /// Domain entity representing a command (order) in the warehouse system.
 class CommandEntity extends Equatable {
   final int id;
+  final String? backendId; // UUID from backend API
   final String? orderNumber;
   final CommandType type;
   final CommandStatus status;
@@ -23,9 +24,11 @@ class CommandEntity extends Equatable {
   final DateTime createdAt;
   final DateTime? scheduledTime;
   final List<CommandItemEntity> items;
+  final int? itemCount; // From backend API item_count (for list view)
 
   const CommandEntity({
     required this.id,
+    this.backendId,
     this.orderNumber,
     required this.type,
     required this.status,
@@ -34,11 +37,18 @@ class CommandEntity extends Equatable {
     required this.createdAt,
     this.scheduledTime,
     this.items = const [],
+    this.itemCount,
   });
 
-  /// Get formatted order ID
-  String get displayOrderId =>
-      orderNumber ?? 'ORD-${id.toString().padLeft(4, '0')}';
+  /// Get the ID to use for backend API calls
+  String get apiId => backendId ?? id.toString();
+
+  /// Get formatted order ID in format ORD-YYYY-XXXX
+  String get displayOrderId {
+    if (orderNumber != null) return orderNumber!;
+    final year = createdAt.year;
+    return 'ORD-$year-${id.toString().padLeft(4, '0')}';
+  }
 
   /// Get display location or default
   String get displayLocation => location ?? 'N/A';
@@ -96,15 +106,17 @@ class CommandEntity extends Equatable {
     }
   }
 
-  int get totalItems => items.length;
+  int get totalItems => itemCount ?? items.length;
   int get completedItems => items.where((i) => i.status == 'COMPLETED').length;
   int get progressPercentage {
-    if (items.isEmpty) return 0;
-    return ((completedItems / totalItems) * 100).round();
+    final total = totalItems;
+    if (total == 0) return 0;
+    return ((completedItems / total) * 100).round();
   }
 
   CommandEntity copyWith({
     int? id,
+    String? backendId,
     String? orderNumber,
     CommandType? type,
     CommandStatus? status,
@@ -112,10 +124,12 @@ class CommandEntity extends Equatable {
     int? createdBy,
     DateTime? createdAt,
     DateTime? scheduledTime,
+    int? itemCount,
     List<CommandItemEntity>? items,
   }) {
     return CommandEntity(
       id: id ?? this.id,
+      backendId: backendId ?? this.backendId,
       orderNumber: orderNumber ?? this.orderNumber,
       type: type ?? this.type,
       status: status ?? this.status,
@@ -123,6 +137,7 @@ class CommandEntity extends Equatable {
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
       scheduledTime: scheduledTime ?? this.scheduledTime,
+      itemCount: itemCount ?? this.itemCount,
       items: items ?? this.items,
     );
   }
@@ -130,6 +145,7 @@ class CommandEntity extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    backendId,
     orderNumber,
     type,
     status,
@@ -137,6 +153,7 @@ class CommandEntity extends Equatable {
     createdBy,
     createdAt,
     scheduledTime,
+    itemCount,
     items,
   ];
 }
@@ -150,6 +167,7 @@ class CommandItemEntity extends Equatable {
   final int quantity;
   final String? lotNumber;
   final int? locationExpectedId;
+  final String? location;
   final String status;
   final DateTime? validatedAt;
   final int? validatedBy;
@@ -162,6 +180,7 @@ class CommandItemEntity extends Equatable {
     required this.quantity,
     this.lotNumber,
     this.locationExpectedId,
+    this.location,
     required this.status,
     this.validatedAt,
     this.validatedBy,
@@ -179,6 +198,7 @@ class CommandItemEntity extends Equatable {
     int? quantity,
     String? lotNumber,
     int? locationExpectedId,
+    String? location,
     String? status,
     DateTime? validatedAt,
     int? validatedBy,
@@ -191,6 +211,7 @@ class CommandItemEntity extends Equatable {
       quantity: quantity ?? this.quantity,
       lotNumber: lotNumber ?? this.lotNumber,
       locationExpectedId: locationExpectedId ?? this.locationExpectedId,
+      location: location ?? this.location,
       status: status ?? this.status,
       validatedAt: validatedAt ?? this.validatedAt,
       validatedBy: validatedBy ?? this.validatedBy,
@@ -206,6 +227,7 @@ class CommandItemEntity extends Equatable {
     quantity,
     lotNumber,
     locationExpectedId,
+    location,
     status,
     validatedAt,
     validatedBy,

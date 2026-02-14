@@ -4,6 +4,7 @@ import '../../domain/entities/command_entity.dart';
 class CommandModel extends CommandEntity {
   const CommandModel({
     required super.id,
+    super.backendId,
     super.orderNumber,
     required super.type,
     required super.status,
@@ -11,6 +12,7 @@ class CommandModel extends CommandEntity {
     super.createdBy,
     required super.createdAt,
     super.scheduledTime,
+    super.itemCount,
     super.items,
   });
 
@@ -78,7 +80,115 @@ class CommandModel extends CommandEntity {
     }
   }
 
-  /// Create from database row
+  /// Create from simple API response (used by remote datasource)
+  factory CommandModel.fromApiResponse(Map<String, dynamic> json) {
+    return CommandModel(
+      id: json['id'],
+      orderNumber: json['orderId'],
+      type: _parseType(json['type']),
+      status: _parseStatus(json['status']),
+      location: json['displayLocation'],
+      createdAt: DateTime.parse(json['createdAt']),
+      items: [], // TODO: Parse items if available in the new API
+    );
+  }
+
+  /// Create from backend TaskSummary response (GET /tasks list)
+  /// TaskSummary has: id (string), order_id, order_type, status, operation_type, created_at, item_count, delivery_id, storage_location
+  factory CommandModel.fromTaskSummary(Map<String, dynamic> json) {
+    // Parse storage location if available
+    String? locationStr;
+    if (json['storage_location'] != null) {
+      final storageLoc = json['storage_location'] as Map<String, dynamic>;
+      locationStr = storageLoc['code']?.toString();
+    }
+
+    final rawId = json['id']?.toString() ?? '0';
+    return CommandModel(
+      id: int.tryParse(rawId) ?? 0,
+      backendId: rawId,
+      orderNumber:
+          json['delivery_id']?.toString() ?? json['order_id']?.toString(),
+      type: _parseType(
+        json['operation_type']?.toString() ??
+            json['order_type']?.toString() ??
+            'RECEIPT',
+      ),
+      status: _parseStatus(json['status']?.toString() ?? 'PENDING'),
+      location: locationStr,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
+      itemCount: json['item_count'],
+      items: [],
+    );
+  }
+
+  /// Create from backend TaskDetail response (GET /tasks/{id})
+  factory CommandModel.fromTaskDetail(Map<String, dynamic> json) {
+    // Parse items from backend format
+    final itemsList = json['items'] as List<dynamic>? ?? [];
+    final items = itemsList.map((item) {
+      final itemMap = item as Map<String, dynamic>;
+      final sku = itemMap['sku'] as Map<String, dynamic>?;
+      final destLocation =
+          itemMap['destination_location'] as Map<String, dynamic>?;
+      return CommandItemModel(
+        id: int.tryParse(itemMap['id']?.toString() ?? '0') ?? 0,
+        commandId: int.tryParse(json['order_id']?.toString() ?? '0') ?? 0,
+        sku: sku?['sku_code'] ?? 'N/A',
+        productName: sku?['name'],
+        quantity: itemMap['quantity'] ?? 0,
+        locationExpectedId: destLocation != null
+            ? int.tryParse(destLocation['id']?.toString() ?? '0')
+            : null,
+        location: destLocation?['code'] as String?,
+        status: 'PENDING',
+      );
+    }).toList();
+
+    // Build location string from storage_location if available
+    String? locationStr;
+    final storageLoc = json['storage_location'] as Map<String, dynamic>?;
+    if (storageLoc != null) {
+      locationStr = storageLoc['code'] as String?;
+    }
+
+    final rawId = json['id']?.toString() ?? '0';
+
+    return CommandModel(
+      id: int.tryParse(rawId) ?? 0,
+      backendId: rawId,
+      orderNumber: json['order_code'] as String?,
+      type: _parseType(
+        json['operation_type']?.toString() ??
+            json['order_type']?.toString() ??
+            'RECEIPT',
+      ),
+      status: _parseStatus(json['status']?.toString() ?? 'PENDING'),
+      location: locationStr,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
+      items: items,
+    );
+  }
+
+  /// Convert to database map
+  Map<String, dynamic> toMap() {
+    return {
+      'command_id': id,
+      'order_number': orderNumber,
+      'command_type': _typeToString(type),
+      'status': _statusToString(status),
+      'location': location,
+      'created_by': createdBy,
+      'created_at': createdAt.toIso8601String(),
+      'scheduled_time': scheduledTime?.toIso8601String(),
+    };
+  }
+
+  /// Create from database row with pre-loaded items
   factory CommandModel.fromMap(
     Map<String, dynamic> map, {
     List<CommandItemModel>? items,
@@ -96,20 +206,6 @@ class CommandModel extends CommandEntity {
           : null,
       items: items ?? [],
     );
-  }
-
-  /// Convert to database map
-  Map<String, dynamic> toMap() {
-    return {
-      'command_id': id,
-      'order_number': orderNumber,
-      'command_type': _typeToString(type),
-      'status': _statusToString(status),
-      'location': location,
-      'created_by': createdBy,
-      'created_at': createdAt.toIso8601String(),
-      'scheduled_time': scheduledTime?.toIso8601String(),
-    };
   }
 
   /// Create from JSON
@@ -175,6 +271,7 @@ class CommandItemModel extends CommandItemEntity {
     required super.quantity,
     super.lotNumber,
     super.locationExpectedId,
+    super.location,
     required super.status,
     super.validatedAt,
     super.validatedBy,

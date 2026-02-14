@@ -70,7 +70,8 @@ class TaskSummary(BaseModel):
     operation_type: OperationType
     created_at: datetime
     item_count: int
-    delivery_id: Optional[str] = None
+    delivery_id: Optional[int] = None
+    storage_location: Optional[LocationInfo] = None
 
 
 class TaskDetail(BaseModel):
@@ -91,7 +92,7 @@ class TaskDetail(BaseModel):
     route: Optional[RoutePlan] = None
     
     # Order details
-    delivery_id: Optional[str] = None
+    delivery_id: Optional[int] = None
     storage_location: Optional[LocationInfo] = None
     items: List[OrderLineItem] = []
     

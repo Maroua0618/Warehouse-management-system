@@ -5,11 +5,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/entities/command_entity.dart';
 import '../../logic/cubit.dart';
-import '../cubit/mock_ingoing_validation_cubit.dart';
 import 'outgoing_execution_page.dart';
 import 'ingoing_validation_page.dart';
 import 'order_already_validated_page.dart';
 import 'profile_page.dart';
+import '../../../../injection_container.dart';
+import '../cubit/ingoing_validation_cubit.dart';
+import '../cubit/outgoing_execution_cubit.dart';
 
 /// Employee Task Dashboard - Main screen for employees
 /// Shows current zone and today's tasks (ingoing/outgoing orders)
@@ -175,9 +177,15 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   void _navigateToProfile() {
+    final employeeCubit = context.read<EmployeeCubit>();
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const EmployeeProfileScreen()),
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: employeeCubit,
+          child: const EmployeeProfileScreen(),
+        ),
+      ),
     );
   }
 
@@ -231,6 +239,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               letterSpacing: 0.3,
               fontSize: 10,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
       ),
@@ -389,12 +399,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
               (order) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _buildTaskCard(
-                  orderId: order.displayOrderId,
-                  location: order.displayLocation,
-                  itemCount: order.totalItems,
-                  status: order.frenchStatus,
-                  time: order.displayTime,
-                  isValidated: order.isValidated,
+                  order: order,
                   isOutgoing: _showOutgoingOrders,
                 ),
               ),
@@ -423,16 +428,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
   }
 
   Widget _buildTaskCard({
-    required String orderId,
-    required String location,
-    required int itemCount,
-    required String status,
-    required String time,
-    required bool isValidated,
+    required CommandEntity order,
     bool isOutgoing = false,
   }) {
-    final statusColor = isValidated ? AppColors.success : AppColors.accent;
-    final icon = isValidated
+    final statusColor = order.isValidated
+        ? AppColors.success
+        : AppColors.accent;
+    final icon = order.isValidated
         ? Icons.check_circle_outline
         : Icons.inventory_2_outlined;
 
@@ -451,7 +453,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _navigateToTask(orderId),
+          onTap: () => _navigateToTask(order),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -474,37 +476,49 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        orderId,
+                        order.displayOrderId,
                         style: AppTextStyles.cardTitle.copyWith(
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
                           Icon(
                             isOutgoing ? Icons.location_on : Icons.access_time,
-                            size: 12,
+                            size: 14,
                             color: AppColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            isOutgoing ? location : time,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
+                          Expanded(
+                            child: Text(
+                              isOutgoing
+                                  ? order.displayLocation
+                                  : order.displayTime,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
                           Icon(
                             Icons.grid_view,
                             size: 14,
                             color: AppColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            '$itemCount Articles',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
+                          Expanded(
+                            child: Text(
+                              '${order.totalItems} Articles',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -523,11 +537,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    status,
+                    order.frenchStatus,
                     style: AppTextStyles.badge.copyWith(
                       color: statusColor,
                       fontSize: 10,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -545,28 +561,27 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
     );
   }
 
-  void _navigateToTask(String orderId) async {
-    // Get current state to access orders
-    final state = context.read<EmployeeCubit>().state;
-    if (state is! EmployeeLoaded) return;
+  void _navigateToTask(CommandEntity order) async {
+    final employeeState = context.read<EmployeeCubit>().state;
+    if (employeeState is! EmployeeLoaded) {
+      // Handle case where state is not loaded, maybe show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User data not available yet.")),
+      );
+      return;
+    }
 
     if (_showOutgoingOrders) {
-      // Find the order from loaded state
-      final orders = state.outgoingOrders;
-      final order = orders
-          .where((o) => o.displayOrderId == orderId)
-          .firstOrNull;
-
-      if (order?.isValidated == true) {
+      if (order.isValidated == true) {
         // Show already validated page
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => OrderAlreadyValidatedPage(
-              orderId: orderId,
+              orderId: order.displayOrderId,
               isOutgoing: true,
               deliveryId: 'WH-88293',
-              skuReference: orderId,
+              skuReference: order.displayOrderId,
             ),
           ),
         );
@@ -576,7 +591,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       final result = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
-          builder: (context) => OutgoingExecutionPage(orderId: orderId),
+          builder: (context) => BlocProvider(
+            create: (context) => sl<OutgoingExecutionCubit>(),
+            child: OutgoingExecutionPage(
+              orderId: order.apiId,
+              user: employeeState.currentUser,
+            ),
+          ),
         ),
       );
 
@@ -585,19 +606,13 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         context.read<EmployeeCubit>().refresh();
       }
     } else {
-      // Find the order from loaded state
-      final orders = state.incomingOrders;
-      final order = orders
-          .where((o) => o.displayOrderId == orderId)
-          .firstOrNull;
-
-      if (order?.isValidated == true) {
+      if (order.isValidated == true) {
         // Show already validated page
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => OrderAlreadyValidatedPage(
-              orderId: orderId,
+              orderId: order.displayOrderId,
               isOutgoing: false,
               deliveryId: 'WH-88293',
               skuReference: 'SKU-9902-BX',
@@ -611,8 +626,11 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
         context,
         MaterialPageRoute(
           builder: (context) => BlocProvider(
-            create: (context) => MockIngoingValidationCubit(),
-            child: IngoingValidationPage(orderId: orderId),
+            create: (context) => sl<IngoingValidationCubit>(),
+            child: IngoingValidationPage(
+              orderId: order.apiId,
+              user: employeeState.currentUser,
+            ),
           ),
         ),
       );

@@ -39,178 +39,164 @@ class ConfirmDeliveryDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Truck icon in teal circle
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
-                shape: BoxShape.circle,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Truck icon in teal circle
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.local_shipping,
+                  size: 32,
+                  color: AppColors.primary,
+                ),
               ),
-              child: const Icon(
-                Icons.local_shipping,
-                size: 36,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-            // Title
-            const Text(
-              'Confirmer le Placement',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+              // Title
+              const Text(
+                'Confirmer le Placement\nde la Livraison',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'de la Livraison',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 6),
 
-            // Subtitle
-            Text(
-              'VALIDATION SORTANTE',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-                letterSpacing: 1.2,
+              // Subtitle
+              Text(
+                'VALIDATION SORTANTE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.2,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-            // Info container
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F8F8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-              ),
-              child: Column(
-                children: [
-                  // Delivery ID row
-                  _buildInfoRow('ID Livraison', '#$deliveryId'),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 16),
-                  // Shipment Status row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Statut Expédition',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: AppColors.success,
+              // Info container
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                ),
+                child: Column(
+                  children: [
+                    _buildInfoRow('ID Livraison', '#$deliveryId'),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Statut',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$itemsVerified Articles Vérifiés',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: 14,
                               color: AppColors.success,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Validate Delivery button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onValidate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Text(
-                      'Valider Livraison',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$itemsVerified Articles',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward, size: 18),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
-            // Back button
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: onBack,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'Retour',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Secure logistics badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.lock_outline, size: 14, color: AppColors.success),
-                const SizedBox(width: 6),
-                Text(
-                  'PROTOCOLE LOGISTIQUE SÉCURISÉ ACTIF',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.success,
-                    letterSpacing: 0.5,
+              // Validate Delivery button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onValidate,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Valider Livraison',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+
+              // Back button
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: onBack,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  child: const Text(
+                    'Retour',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Secure logistics badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_outline, size: 12, color: AppColors.success),
+                  const SizedBox(width: 4),
+                  Text(
+                    'PROTOCOLE SÉCURISÉ ACTIF',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.success,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

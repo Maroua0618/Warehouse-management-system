@@ -1,11 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../data/datasources/employee_local_datasource.dart';
 import '../data/models/command_model.dart';
 import '../data/models/incident_model.dart';
 import '../domain/entities/command_entity.dart';
 import '../domain/entities/incident_entity.dart';
-import '../domain/entities/user_entity.dart';
+import '../../shared/domain/entities/user_entity.dart';
+import '../../shared/presentation/cubit/auth_cubit.dart';
+import '../../shared/presentation/cubit/auth_state.dart';
 
 // ============== EMPLOYEE STATE ==============
 
@@ -116,37 +120,56 @@ class EmployeeIncidentReported extends EmployeeState {
 /// Cubit for managing employee feature state.
 class EmployeeCubit extends Cubit<EmployeeState> {
   final EmployeeLocalDatasource _datasource;
-  final int _currentUserId;
+  final AuthCubit _authCubit;
+  final String _baseUrl = 'http://10.36.245.125:8000';
 
   EmployeeCubit({
     required EmployeeLocalDatasource datasource,
-    required int currentUserId,
+    required AuthCubit authCubit,
   }) : _datasource = datasource,
-       _currentUserId = currentUserId,
+       _authCubit = authCubit,
        super(EmployeeInitial());
 
   /// Initialize and load all employee data
   Future<void> initialize() async {
     emit(EmployeeLoading());
     try {
-      // Initialize sample data if needed
-      await _datasource.insertSampleCommands();
-      await _datasource.insertSampleInventory();
-
-      // Load user
-      final user = await _datasource.getCurrentUser(_currentUserId);
-      if (user == null) {
-        emit(const EmployeeError('User not found'));
+      print('🔵 CUBIT: Starting initialize()');
+      // Get authenticated user from AuthCubit
+      final authState = _authCubit.state;
+      if (authState is! AuthAuthenticated) {
+        print('❌ CUBIT: User not authenticated');
+        emit(const EmployeeError('User not authenticated'));
         return;
       }
 
-      // Load commands by type
-      final incomingOrders = await _datasource.getCommands(type: 'RECEIPT');
-      final outgoingOrders = await _datasource.getCommands(type: 'DELIVERY');
-      final pickingOrders = await _datasource.getCommands(type: 'PICKING');
+      final backendToken = authState.user.backendToken;
+      if (backendToken == null) {
+        print('❌ CUBIT: Backend token not available');
+        emit(const EmployeeError('Backend token not available'));
+        return;
+      }
 
-      // Load stats
-      final stats = await _datasource.getEmployeeStats(_currentUserId);
+      print('✅ CUBIT: Auth OK, user=${authState.user.email}');
+      // Use authenticated user data
+      final user = authState.user;
+
+      // Fetch commands and stats from backend in parallel
+      final results = await Future.wait([
+        _fetchAllTasksFromBackend(backendToken),
+        _fetchStatsFromBackend(backendToken),
+      ]);
+
+      final tasksMap = results[0] as Map<String, List<CommandEntity>>;
+      final stats = results[1] as Map<String, dynamic>;
+
+      final incomingOrders = tasksMap['ingoing'] ?? [];
+      final outgoingOrders = tasksMap['outgoing'] ?? [];
+      final pickingOrders = tasksMap['picking'] ?? [];
+
+      print(
+        '📦 Tasks loaded - Incoming: ${incomingOrders.length}, Outgoing: ${outgoingOrders.length}, Picking: ${pickingOrders.length}',
+      );
 
       emit(
         EmployeeLoaded(
@@ -162,6 +185,101 @@ class EmployeeCubit extends Cubit<EmployeeState> {
     }
   }
 
+  /// Fetch all tasks from backend API (single call)
+  Future<Map<String, List<CommandEntity>>> _fetchAllTasksFromBackend(
+    String token,
+  ) async {
+    try {
+      print('Fetching tasks from: $_baseUrl/tasks');
+      print(
+        'Using token: ${token.length > 20 ? '${token.substring(0, 20)}...' : token}',
+      );
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl/tasks'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        print('Successfully fetched all tasks from backend');
+        print('Response body: ${response.body}');
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        final ingoingRaw = data['ingoing_tasks'] as List? ?? [];
+        final outgoingRaw = data['outgoing_tasks'] as List? ?? [];
+
+        final ingoing = ingoingRaw
+            .map(
+              (json) =>
+                  CommandModel.fromTaskSummary(json as Map<String, dynamic>),
+            )
+            .toList();
+        final outgoing = outgoingRaw
+            .map(
+              (json) =>
+                  CommandModel.fromTaskSummary(json as Map<String, dynamic>),
+            )
+            .toList();
+
+        // Separate picking tasks from outgoing based on operation_type
+        final picking = outgoing
+            .where((c) => c.type == CommandType.picking)
+            .toList();
+        final delivery = outgoing
+            .where((c) => c.type != CommandType.picking)
+            .toList();
+
+        return {'ingoing': ingoing, 'outgoing': delivery, 'picking': picking};
+      } else {
+        print(
+          'Backend failed to fetch tasks. Status: ${response.statusCode}, Body: ${response.body}',
+        );
+        return {'ingoing': [], 'outgoing': [], 'picking': []};
+      }
+    } catch (e) {
+      print('Error fetching tasks from backend: $e');
+      print('Token used: ${token.substring(0, 20)}...');
+      return {'ingoing': [], 'outgoing': [], 'picking': []};
+    }
+  }
+
+  /// Fetch stats from backend API
+  Future<Map<String, dynamic>> _fetchStatsFromBackend(String token) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl/employee/stats'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        // Fallback to local stats
+        final authState = _authCubit.state;
+        if (authState is AuthAuthenticated) {
+          return {
+            'total_tasks': 0,
+            'completed_tasks': 0,
+            'completion_rate': 0.0,
+          };
+        }
+        return {};
+      }
+    } catch (e) {
+      // Return empty stats if API fails
+      return {'total_tasks': 0, 'completed_tasks': 0, 'completion_rate': 0.0};
+    }
+  }
+
   /// Refresh all data
   Future<void> refresh() async {
     final currentState = state;
@@ -171,13 +289,32 @@ class EmployeeCubit extends Cubit<EmployeeState> {
     }
 
     try {
-      final incomingOrders = await _datasource.getCommands(type: 'RECEIPT');
-      final outgoingOrders = await _datasource.getCommands(type: 'DELIVERY');
-      final pickingOrders = await _datasource.getCommands(type: 'PICKING');
-      final stats = await _datasource.getEmployeeStats(_currentUserId);
+      // Get auth token
+      final authState = _authCubit.state;
+      if (authState is! AuthAuthenticated ||
+          authState.user.backendToken == null) {
+        emit(const EmployeeError('User not authenticated'));
+        return;
+      }
+
+      final backendToken = authState.user.backendToken!;
+
+      // Fetch fresh data from backend
+      final results = await Future.wait([
+        _fetchAllTasksFromBackend(backendToken),
+        _fetchStatsFromBackend(backendToken),
+      ]);
+
+      final tasksMap = results[0] as Map<String, List<CommandEntity>>;
+      final stats = results[1] as Map<String, dynamic>;
+
+      final incomingOrders = tasksMap['ingoing'] ?? [];
+      final outgoingOrders = tasksMap['outgoing'] ?? [];
+      final pickingOrders = tasksMap['picking'] ?? [];
 
       emit(
-        currentState.copyWith(
+        EmployeeLoaded(
+          currentUser: currentState.currentUser,
           incomingOrders: incomingOrders,
           outgoingOrders: outgoingOrders,
           pickingOrders: pickingOrders,
@@ -202,20 +339,23 @@ class EmployeeCubit extends Cubit<EmployeeState> {
     emit(EmployeeReportingIncident(currentState));
 
     try {
+      // Get user ID from current state
+      final userId = int.tryParse(currentState.currentUser.userId) ?? 0;
+
       // Parse type from display name
       final incidentType = IncidentModel.parseFromDisplayName(type);
 
       final incidentId = await _datasource.createIncident(
         type: _incidentTypeToString(incidentType),
         description: description,
-        reportedBy: _currentUserId,
+        reportedBy: userId,
         commandId: commandId,
         locationId: locationId,
       );
 
       // Log the action
       await _datasource.logAction(
-        userId: _currentUserId,
+        userId: userId,
         action: 'CREATE_INCIDENT',
         entity: 'incident',
         entityId: incidentId,
@@ -227,7 +367,7 @@ class EmployeeCubit extends Cubit<EmployeeState> {
         id: incidentId,
         type: incidentType,
         description: description,
-        reportedBy: _currentUserId,
+        reportedBy: userId,
         reporterName: currentState.currentUser.fullName,
         commandId: commandId,
         locationId: locationId,
@@ -274,10 +414,12 @@ class EmployeeCubit extends Cubit<EmployeeState> {
     if (currentState is! EmployeeLoaded) return;
 
     try {
+      final userId = int.tryParse(currentState.currentUser.userId) ?? 0;
+
       await _datasource.updateCommandItemStatus(
         itemId,
         'COMPLETED',
-        validatedBy: _currentUserId,
+        validatedBy: userId,
       );
 
       // Update command status
@@ -285,7 +427,7 @@ class EmployeeCubit extends Cubit<EmployeeState> {
 
       // Log the action
       await _datasource.logAction(
-        userId: _currentUserId,
+        userId: userId,
         action: 'VALIDATE_ITEM',
         entity: 'command_item',
         entityId: itemId,
@@ -306,11 +448,13 @@ class EmployeeCubit extends Cubit<EmployeeState> {
     if (currentState is! EmployeeLoaded) return;
 
     try {
+      final userId = int.tryParse(currentState.currentUser.userId) ?? 0;
+
       await _datasource.completePathStep(pathStepId);
 
       // Log the action
       await _datasource.logAction(
-        userId: _currentUserId,
+        userId: userId,
         action: 'COMPLETE_PATH_STEP',
         entity: 'path_step',
         entityId: pathStepId,

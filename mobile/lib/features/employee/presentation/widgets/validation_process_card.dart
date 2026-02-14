@@ -1,27 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../domain/entities/ingoing_validation_entity.dart';
+import '../../domain/entities/command_entity.dart';
 
 /// Card showing the validation process information matching Figma design.
 /// Order section and Product Validation section are SEPARATE containers.
 class ValidationProcessCard extends StatelessWidget {
-  final IngoingValidationEntity validation;
+  final CommandEntity validation;
   final VoidCallback? onValidateProduct;
   final VoidCallback? onFlagIssue;
-  final VoidCallback? onQuantityTap;
-  final VoidCallback? onProductTypeTap;
-  final bool isQuantityValidated;
-  final bool isProductTypeValidated;
+  final Set<String> validatedItemIds;
+  final Function(String itemId) onItemToggle;
 
   const ValidationProcessCard({
     super.key,
     required this.validation,
+    required this.validatedItemIds,
+    required this.onItemToggle,
     this.onValidateProduct,
     this.onFlagIssue,
-    this.onQuantityTap,
-    this.onProductTypeTap,
-    this.isQuantityValidated = false,
-    this.isProductTypeValidated = false,
   });
 
   // Cream/beige background color from design
@@ -59,13 +55,17 @@ class ValidationProcessCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 // Order number and status row
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Commande ${validation.orderNumber}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        'Commande ${validation.displayOrderId}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -79,7 +79,7 @@ class ValidationProcessCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        validation.statusLabel,
+                        _getStatusLabel(),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -153,21 +153,40 @@ class ValidationProcessCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Quantity row - white card with circular checkbox (clickable)
-          _buildCheckItemCard(
-            'Quantité (${validation.totalQuantity} unités)',
-            isValidated: isQuantityValidated,
-            onTap: onQuantityTap,
-          ),
+          // Individual product items with checkboxes
+          if (validation.items.isNotEmpty)
+            ...validation.items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final itemId = item.id.toString();
+              final isValidated = validatedItemIds.contains(itemId);
 
-          const SizedBox(height: 12),
-
-          // Product Type row - white card with circular checkbox (clickable)
-          _buildCheckItemCard(
-            'Type de Produit (${validation.productType})',
-            isValidated: isProductTypeValidated,
-            onTap: onProductTypeTap,
-          ),
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index < validation.items.length - 1 ? 12 : 0,
+                ),
+                child: _buildCheckItemCard(
+                  '${item.productName ?? item.sku} (${item.quantity} unités)',
+                  isValidated: isValidated,
+                  onTap: () => onItemToggle(itemId),
+                ),
+              );
+            })
+          else
+          // Fallback if no items loaded yet - show generic checkboxes
+          ...[
+            _buildCheckItemCard(
+              'Quantité (${validation.totalItems} articles)',
+              isValidated: validatedItemIds.contains('quantity'),
+              onTap: () => onItemToggle('quantity'),
+            ),
+            const SizedBox(height: 12),
+            _buildCheckItemCard(
+              'Type de Produit',
+              isValidated: validatedItemIds.contains('product_type'),
+              onTap: () => onItemToggle('product_type'),
+            ),
+          ],
         ],
       ),
     );
@@ -222,28 +241,41 @@ class ValidationProcessCard extends StatelessWidget {
     );
   }
 
+  String _getStatusLabel() {
+    switch (validation.status) {
+      case CommandStatus.pending:
+        return 'EN ATTENTE';
+      case CommandStatus.inProgress:
+        return 'EN COURS';
+      case CommandStatus.completed:
+        return 'TERMINÉ';
+      case CommandStatus.cancelled:
+        return 'ANNULÉ';
+    }
+  }
+
   Color _getStatusBackgroundColor() {
     switch (validation.status) {
-      case ValidationStatus.notStarted:
+      case CommandStatus.pending:
         return Colors.grey.shade200;
-      case ValidationStatus.inProgress:
+      case CommandStatus.inProgress:
         return _inProgressColor.withOpacity(0.15);
-      case ValidationStatus.completed:
+      case CommandStatus.completed:
         return AppColors.success.withOpacity(0.15);
-      case ValidationStatus.hasIssue:
+      case CommandStatus.cancelled:
         return AppColors.failure.withOpacity(0.15);
     }
   }
 
   Color _getStatusTextColor() {
     switch (validation.status) {
-      case ValidationStatus.notStarted:
+      case CommandStatus.pending:
         return AppColors.textSecondary;
-      case ValidationStatus.inProgress:
+      case CommandStatus.inProgress:
         return _inProgressColor;
-      case ValidationStatus.completed:
+      case CommandStatus.completed:
         return AppColors.success;
-      case ValidationStatus.hasIssue:
+      case CommandStatus.cancelled:
         return AppColors.failure;
     }
   }

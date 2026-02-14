@@ -8,8 +8,8 @@ settings = get_settings()
 
 @lru_cache()
 def get_supabase_client() -> Client:
-    """Get Supabase client instance."""
-    return create_client(settings.supabase_url, settings.supabase_anon_key)
+    """Get Supabase client instance with service role (bypasses RLS)."""
+    return create_client(settings.supabase_url, settings.supabase_service_role_key)
 
 
 def get_db() -> Client:

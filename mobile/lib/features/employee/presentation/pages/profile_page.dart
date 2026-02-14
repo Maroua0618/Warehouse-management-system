@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../logic/cubit.dart';
 
 class EmployeeProfileScreen extends StatefulWidget {
   const EmployeeProfileScreen({super.key});
@@ -39,102 +41,130 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-              Text(
-                'Profil Employé',
-                style: AppTextStyles.cardTitle.copyWith(color: Colors.white),
-              ),
-              GestureDetector(
-                onTap: () {
-                  // Edit profile
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.edit, color: Colors.white, size: 20),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Stack(
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
-                  image: const DecorationImage(
-                    image: NetworkImage(
-                      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200',
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.success,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 3),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Alex Johnson',
-            style: AppTextStyles.sectionHeader.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Opérateur Entrepôt',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.8),
+    return BlocBuilder<EmployeeCubit, EmployeeState>(
+      builder: (context, state) {
+        String userName = 'Employé';
+        String initials = 'EM';
+        String role = 'Opérateur Entrepôt';
+
+        if (state is EmployeeLoaded) {
+          userName = state.currentUser.fullName;
+          initials = state.currentUser.initials;
+          role = state.currentUser.role.isNotEmpty
+              ? state.currentUser.role
+              : 'Opérateur Entrepôt';
+        }
+
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
             ),
           ),
-        ],
-      ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Profil Employé',
+                    style: AppTextStyles.cardTitle.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Edit profile
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Stack(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.2),
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: AppTextStyles.sectionHeader.copyWith(
+                          color: Colors.white,
+                          fontSize: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                userName,
+                style: AppTextStyles.sectionHeader.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                role,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -264,91 +294,112 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
   }
 
   Widget _buildPerformanceStats() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return BlocBuilder<EmployeeCubit, EmployeeState>(
+      builder: (context, state) {
+        int completedTasks = 0;
+        int totalTasks = 0;
+        double completionRate = 0.0;
+
+        if (state is EmployeeLoaded) {
+          completedTasks = state.stats['completed_tasks'] ?? 0;
+          totalTasks = state.stats['total_tasks'] ?? 0;
+          completionRate = (state.stats['completion_rate'] ?? 0.0).toDouble();
+        }
+
+        final progressValue = totalTasks > 0
+            ? completedTasks / totalTasks
+            : 0.0;
+        final precisionValue = '${(completionRate * 100).toStringAsFixed(0)}%';
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Statistiques de Performance',
-              style: AppTextStyles.labelLarge.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Column(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Text(
+                  'Statistiques de Performance',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Column(
                   children: [
-                    Text(
-                      'Tâches Complétées',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tâches Complétées',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '$completedTasks / $totalTasks',
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '14 / 20',
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progressValue,
+                        minHeight: 8,
+                        backgroundColor: AppColors.textSecondary.withOpacity(
+                          0.1,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: 14 / 20,
-                    minHeight: 8,
-                    backgroundColor: AppColors.textSecondary.withOpacity(0.1),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        label: 'PRÉCISION',
+                        value: precisionValue,
+                        icon: Icons.trending_up,
+                        color: AppColors.success,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        label: 'EFFICACITÉ',
+                        value: precisionValue,
+                        icon: Icons.flash_on,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    label: 'PRÉCISION',
-                    value: '98%',
-                    icon: Icons.trending_up,
-                    color: AppColors.success,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    label: 'EFFICACITÉ',
-                    value: '94%',
-                    icon: Icons.flash_on,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

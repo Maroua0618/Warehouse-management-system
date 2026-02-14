@@ -3,12 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/database/local_database.dart';
 import 'core/theme/app_theme.dart';
 import 'routes.dart';
 import 'injection_container.dart';
+import 'features/shared/presentation/cubit/auth_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,12 +54,15 @@ class BmsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BMS - Warehouse Management',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.theme,
-      initialRoute: AppRoutes.initialRoute,
-      routes: AppRoutes.routes,
+    return BlocProvider<AuthCubit>(
+      create: (_) => sl<AuthCubit>(),
+      child: MaterialApp(
+        title: 'BMS - Warehouse Management',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.theme,
+        initialRoute: AppRoutes.initialRoute,
+        routes: AppRoutes.routes,
+      ),
     );
   }
 }

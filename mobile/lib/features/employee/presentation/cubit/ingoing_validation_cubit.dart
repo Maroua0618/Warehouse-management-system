@@ -30,7 +30,9 @@ class IngoingValidationCubit extends Cubit<IngoingValidationState> {
       IngoingValidationValidating(currentValidation: currentState.validation),
     );
 
-    final result = await repository.validateProduct(currentState.validation.id);
+    final result = await repository.validateProduct(
+      currentState.validation.apiId,
+    );
 
     result.fold(
       (failure) => emit(
@@ -64,7 +66,7 @@ class IngoingValidationCubit extends Cubit<IngoingValidationState> {
     );
 
     final result = await repository.validateItem(
-      currentValidation.id,
+      currentValidation.apiId,
       itemId,
       pathStepId,
     );
@@ -85,15 +87,42 @@ class IngoingValidationCubit extends Cubit<IngoingValidationState> {
     );
   }
 
+  /// Validates the task with all item validations.
+  Future<void> validateTask(
+    String orderId, {
+    List<String>? validatedItems,
+  }) async {
+    final currentValidation = _getCurrentValidation();
+    if (currentValidation == null) return;
+
+    emit(IngoingValidationValidating(currentValidation: currentValidation));
+
+    final result = await repository.validateTask(
+      orderId,
+      validatedItems: validatedItems,
+    );
+
+    result.fold(
+      (failure) => emit(
+        IngoingValidationError(
+          message: failure.message,
+          previousValidation: currentValidation,
+        ),
+      ),
+      (validation) => emit(IngoingValidationCompleted(orderId: orderId)),
+    );
+  }
+
   /// Reports a problem with the order.
-  Future<void> reportProblem(String description) async {
+  Future<void> reportProblem(String category, String description) async {
     final currentValidation = _getCurrentValidation();
     if (currentValidation == null) return;
 
     emit(IngoingValidationValidating(currentValidation: currentValidation));
 
     final result = await repository.reportProblem(
-      currentValidation.id,
+      currentValidation.apiId,
+      category,
       description,
     );
 
@@ -120,7 +149,7 @@ class IngoingValidationCubit extends Cubit<IngoingValidationState> {
 
     emit(IngoingValidationValidating(currentValidation: currentValidation));
 
-    final result = await repository.completeValidation(currentValidation.id);
+    final result = await repository.completeValidation(currentValidation.apiId);
 
     result.fold(
       (failure) => emit(
@@ -129,7 +158,7 @@ class IngoingValidationCubit extends Cubit<IngoingValidationState> {
           previousValidation: currentValidation,
         ),
       ),
-      (_) => emit(IngoingValidationCompleted(orderId: currentValidation.id)),
+      (_) => emit(IngoingValidationCompleted(orderId: currentValidation.apiId)),
     );
   }
 

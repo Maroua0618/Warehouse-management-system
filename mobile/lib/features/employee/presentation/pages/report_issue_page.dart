@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../logic/cubit.dart';
+import '../cubit/ingoing_validation_cubit.dart';
 
 /// Issue type model with icon and description.
 class IssueType {
@@ -111,18 +112,33 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
         ? _descriptionController.text
         : 'Aucune description fournie';
 
-    // Try to use the EmployeeCubit if available
-    try {
-      final cubit = context.read<EmployeeCubit>();
-      await cubit.reportIncident(
-        type: _selectedIssueType!.title,
-        description: description,
-        commandId: widget.commandId != null
-            ? int.tryParse(widget.orderId ?? '')
-            : null,
-      );
-    } catch (_) {
-      // Fallback to callback if cubit not available
+    // Submit issue report to backend
+    if (widget.orderId != null) {
+      // Use IngoingValidationCubit if available
+      try {
+        final validationCubit = context.read<IngoingValidationCubit>();
+        await validationCubit.reportProblem(
+          _selectedIssueType!.id.toUpperCase(),
+          description,
+        );
+      } catch (e) {
+        print('IngoingValidationCubit not available: $e');
+        // Try EmployeeCubit as fallback
+        try {
+          final cubit = context.read<EmployeeCubit>();
+          await cubit.reportIncident(
+            type: _selectedIssueType!.title,
+            description: description,
+            commandId: widget.commandId,
+          );
+        } catch (e2) {
+          print('EmployeeCubit not available: $e2');
+          // Final fallback to callback
+          widget.onSubmit?.call(_selectedIssueType!.title, description);
+        }
+      }
+    } else {
+      // No orderId, use callback
       widget.onSubmit?.call(_selectedIssueType!.title, description);
     }
 
@@ -239,292 +255,302 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
                 type.description.toLowerCase().contains(query);
           }).toList();
 
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(sheetContext),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Text(
-                        'Sélectionner le Type de Problème',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Search bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      onChanged: (value) {
-                        setSheetState(() => searchQuery = value);
-                      },
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher catégories...',
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
-                          fontSize: 14,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Content area (white background)
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          return DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollController) => Container(
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Row(
                       children: [
-                        // Section header
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                          child: Text(
-                            'CATÉGORIES OPÉRATIONNELLES',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-
-                        // Issue types list
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: filteredTypes.length,
-                            itemBuilder: (context, index) {
-                              final type = filteredTypes[index];
-                              final isSelected = tempSelected?.id == type.id;
-
-                              return GestureDetector(
-                                onTap: () {
-                                  setSheetState(() => tempSelected = type);
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : Colors.grey.shade200,
-                                      width: isSelected ? 2 : 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Icon
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: type.iconColor.withOpacity(
-                                            0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          type.icon,
-                                          color: type.iconColor,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-
-                                      // Text
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              type.title,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.textPrimary,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              type.description,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: AppColors.textSecondary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // Radio button
-                                      Container(
-                                        width: 22,
-                                        height: 22,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? const Color(0xFFE57373)
-                                                : Colors.grey.shade400,
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: isSelected
-                                            ? Center(
-                                                child: Container(
-                                                  width: 12,
-                                                  height: 12,
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: Color(
-                                                          0xFFE57373,
-                                                        ),
-                                                      ),
-                                                ),
-                                              )
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                        // Bottom buttons
-                        Container(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            16,
-                            20,
-                            MediaQuery.of(context).padding.bottom + 16,
-                          ),
-                          decoration: BoxDecoration(
+                        GestureDetector(
+                          onTap: () => Navigator.pop(sheetContext),
+                          child: const Icon(
+                            Icons.arrow_back,
                             color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, -2),
-                              ),
-                            ],
+                            size: 24,
                           ),
-                          child: Row(
-                            children: [
-                              // Cancel button
-                              Expanded(
-                                child: TextButton(
-                                  onPressed: () => Navigator.pop(sheetContext),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Annuler',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-
-                              // Confirm Selection button
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: tempSelected != null
-                                      ? () {
-                                          setState(
-                                            () => _selectedIssueType =
-                                                tempSelected,
-                                          );
-                                          Navigator.pop(sheetContext);
-                                        }
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFE57373),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: const Text(
-                                    'Confirmer Sélection',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          'Sélectionner le Type de Problème',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  // Search bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        onChanged: (value) {
+                          setSheetState(() => searchQuery = value);
+                        },
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher catégories...',
+                          hintStyle: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Content area (white background)
+                  Expanded(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Section header
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                            child: Text(
+                              'CATÉGORIES OPÉRATIONNELLES',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+
+                          // Issue types list
+                          Expanded(
+                            child: ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              itemCount: filteredTypes.length,
+                              itemBuilder: (context, index) {
+                                final type = filteredTypes[index];
+                                final isSelected = tempSelected?.id == type.id;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    setSheetState(() => tempSelected = type);
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : Colors.grey.shade200,
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        // Icon
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: type.iconColor.withOpacity(
+                                              0.15,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            type.icon,
+                                            color: type.iconColor,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+
+                                        // Text
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                type.title,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                type.description,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        // Radio button
+                                        Container(
+                                          width: 22,
+                                          height: 22,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? const Color(0xFFE57373)
+                                                  : Colors.grey.shade400,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: isSelected
+                                              ? Center(
+                                                  child: Container(
+                                                    width: 12,
+                                                    height: 12,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          shape:
+                                                              BoxShape.circle,
+                                                          color: Color(
+                                                            0xFFE57373,
+                                                          ),
+                                                        ),
+                                                  ),
+                                                )
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          // Bottom buttons
+                          Container(
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              16,
+                              20,
+                              MediaQuery.of(context).padding.bottom + 16,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, -2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                // Cancel button
+                                Expanded(
+                                  child: TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(sheetContext),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Annuler',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+
+                                // Confirm Selection button
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: tempSelected != null
+                                        ? () {
+                                            setState(
+                                              () => _selectedIssueType =
+                                                  tempSelected,
+                                            );
+                                            Navigator.pop(sheetContext);
+                                          }
+                                        : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFE57373),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: const Text(
+                                      'Confirmer Sélection',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -581,6 +607,19 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    // Get user from EmployeeCubit
+    String initials = 'EM';
+    String userName = 'Employé';
+    try {
+      final state = context.read<EmployeeCubit>().state;
+      if (state is EmployeeLoaded) {
+        initials = state.currentUser.initials;
+        userName = state.currentUser.fullName;
+      }
+    } catch (_) {
+      // Cubit not available, use defaults
+    }
+
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 16,
@@ -612,10 +651,10 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
                     width: 2,
                   ),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'CH',
-                    style: TextStyle(
+                    initials,
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -626,19 +665,19 @@ class _ReportIssuePageState extends State<ReportIssuePage> {
               const SizedBox(width: 12),
 
               // Name and role
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Nom Employé',
-                      style: TextStyle(
+                      userName,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'PERSONNEL ENTREPÔT',
                       style: TextStyle(
                         color: Colors.white70,

@@ -18,6 +18,7 @@ dependencies:
 
   # Network
   dio: ^5.4.0
+  http: ^1.2.0
   connectivity_plus: ^5.0.2
 
   # Local Database

@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/ingoing_validation_entity.dart';
+import '../../domain/entities/command_entity.dart';
 
 /// Base state for ingoing validation operations.
 abstract class IngoingValidationState extends Equatable {
@@ -21,7 +21,7 @@ class IngoingValidationLoading extends IngoingValidationState {
 
 /// Loaded state with validation data.
 class IngoingValidationLoaded extends IngoingValidationState {
-  final IngoingValidationEntity validation;
+  final CommandEntity validation;
   final bool isFromCache;
 
   const IngoingValidationLoaded({
@@ -35,7 +35,7 @@ class IngoingValidationLoaded extends IngoingValidationState {
 
 /// State while validating an item.
 class IngoingValidationValidating extends IngoingValidationState {
-  final IngoingValidationEntity currentValidation;
+  final CommandEntity currentValidation;
   final String? validatingItemId;
 
   const IngoingValidationValidating({
@@ -49,7 +49,7 @@ class IngoingValidationValidating extends IngoingValidationState {
 
 /// State when an item has been successfully validated.
 class IngoingValidationItemValidated extends IngoingValidationState {
-  final IngoingValidationEntity validation;
+  final CommandEntity validation;
   final String validatedItemId;
 
   const IngoingValidationItemValidated({
@@ -63,7 +63,7 @@ class IngoingValidationItemValidated extends IngoingValidationState {
 
 /// State when product validation is complete.
 class IngoingValidationProductValidated extends IngoingValidationState {
-  final IngoingValidationEntity validation;
+  final CommandEntity validation;
 
   const IngoingValidationProductValidated({required this.validation});
 
@@ -83,7 +83,7 @@ class IngoingValidationCompleted extends IngoingValidationState {
 
 /// State when a problem has been reported.
 class IngoingValidationProblemReported extends IngoingValidationState {
-  final IngoingValidationEntity validation;
+  final CommandEntity validation;
   final String description;
 
   const IngoingValidationProblemReported({
@@ -98,7 +98,7 @@ class IngoingValidationProblemReported extends IngoingValidationState {
 /// Error state with message.
 class IngoingValidationError extends IngoingValidationState {
   final String message;
-  final IngoingValidationEntity? previousValidation;
+  final CommandEntity? previousValidation;
 
   const IngoingValidationError({
     required this.message,

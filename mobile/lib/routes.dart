@@ -4,11 +4,9 @@ import 'injection_container.dart';
 import 'features/shared/presentation/pages/splash.dart';
 import 'features/shared/presentation/pages/onboarding.dart';
 import 'features/shared/presentation/pages/login.dart';
-import 'features/shared/data/datasources/auth_local_datasource.dart';
 import 'features/employee/presentation/pages/employee.dart';
 import 'features/employee/logic/cubit.dart';
 import 'features/employee/presentation/cubit/mock_order_cubit.dart';
-import 'features/employee/presentation/cubit/mock_ingoing_validation_cubit.dart';
 import 'features/supervisor/presentation/pages/supervisor.dart';
 
 class AppRoutes {
@@ -29,16 +27,11 @@ class AppRoutes {
         providers: [
           BlocProvider<EmployeeCubit>(
             create: (context) {
-              // Get current user ID from auth datasource, default to 1
-              final authDataSource = sl<AuthLocalDataSource>();
-              final userId = authDataSource.currentUserId ?? 1;
-              return sl<EmployeeCubit>(param1: userId)..initialize();
+              return sl<EmployeeCubit>()..initialize();
             },
           ),
           BlocProvider<MockOrderCubit>(create: (context) => MockOrderCubit()),
-          BlocProvider<MockIngoingValidationCubit>(
-            create: (context) => MockIngoingValidationCubit(),
-          ),
+         
         ],
         child: const EmployeeDashboard(),
       ),

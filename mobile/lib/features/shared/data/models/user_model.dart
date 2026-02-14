@@ -5,71 +5,63 @@ import '../../domain/entities/user_entity.dart';
 class UserModel extends UserEntity {
   const UserModel({
     required super.userId,
-    required super.username,
+    required super.email,
     required super.fullName,
-    required super.roleId,
+    required super.role,
     required super.status,
-    super.lastLogin,
-    required super.createdAt,
+    super.backendToken,
+    super.supabaseToken,
   });
 
   /// Creates a UserModel from a database map.
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      userId: map['user_id'] as int,
-      username: map['username'] as String,
-      fullName: map['full_name'] as String,
-      roleId: map['role_id'] as int,
+      userId: map['id'] as String? ?? map['user_id'] as String,
+      email: map['email'] as String,
+      fullName: map['name'] as String? ?? map['full_name'] as String,
+      role: map['role'] as String,
       status: map['status'] as String,
-      lastLogin: map['last_login'] != null
-          ? DateTime.tryParse(map['last_login'] as String)
-          : null,
-      createdAt:
-          DateTime.tryParse(map['created_at'] as String? ?? '') ??
-          DateTime.now(),
+      backendToken: map['backend_token'] as String?,
+      supabaseToken: map['supabase_token'] as String?,
     );
   }
 
   /// Converts user model to database map.
   Map<String, dynamic> toMap() {
     return {
-      'user_id': userId,
-      'username': username,
-      'full_name': fullName,
-      'role_id': roleId,
+      'id': userId,
+      'email': email,
+      'name': fullName,
+      'role': role,
       'status': status,
-      'last_login': lastLogin?.toIso8601String(),
-      'created_at': createdAt.toIso8601String(),
+      'backend_token': backendToken,
+      'supabase_token': supabaseToken,
     };
   }
 
   /// Creates a UserModel from a JSON map (API response).
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      userId: json['user_id'] ?? json['id'] ?? 0,
-      username: json['username'] ?? '',
-      fullName: json['full_name'] ?? json['fullName'] ?? '',
-      roleId: json['role_id'] ?? json['roleId'] ?? 0,
-      status: json['status'] ?? 'active',
-      lastLogin: json['last_login'] != null
-          ? DateTime.tryParse(json['last_login'] as String)
-          : null,
-      createdAt:
-          DateTime.tryParse(json['created_at'] as String? ?? '') ??
-          DateTime.now(),
+      userId: json['id'] as String? ?? json['user_id'] as String,
+      email: json['email'] as String,
+      fullName: json['name'] as String? ?? json['full_name'] as String,
+      role: json['role'] as String,
+      status: json['status'] as String? ?? 'ACTIVE',
+      backendToken: json['backend_token'] as String?,
+      supabaseToken: json['supabase_token'] as String?,
     );
   }
 
   /// Converts user model to JSON map.
   Map<String, dynamic> toJson() {
     return {
-      'user_id': userId,
-      'username': username,
-      'full_name': fullName,
-      'role_id': roleId,
+      'id': userId,
+      'email': email,
+      'name': fullName,
+      'role': role,
       'status': status,
-      'last_login': lastLogin?.toIso8601String(),
-      'created_at': createdAt.toIso8601String(),
+      'backend_token': backendToken,
+      'supabase_token': supabaseToken,
     };
   }
 }

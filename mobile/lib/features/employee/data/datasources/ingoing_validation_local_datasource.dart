@@ -17,6 +17,33 @@ abstract class IngoingValidationLocalDataSource {
   Future<void> deleteValidation(String orderId);
 }
 
+/// Stub implementation of IngoingValidationLocalDataSource.
+/// TODO: Implement actual SQLite caching when needed.
+class IngoingValidationLocalDataSourceStub
+    implements IngoingValidationLocalDataSource {
+  IngoingValidationLocalDataSourceStub();
+
+  @override
+  Future<IngoingValidationModel> getValidation(String orderId) async {
+    throw const CacheException('Local caching not implemented');
+  }
+
+  @override
+  Future<void> cacheValidation(IngoingValidationModel validation) async {
+    // No-op for now
+  }
+
+  @override
+  Future<void> updateValidation(IngoingValidationModel validation) async {
+    // No-op for now
+  }
+
+  @override
+  Future<void> deleteValidation(String orderId) async {
+    // No-op for now
+  }
+}
+
 /// Implementation of IngoingValidationLocalDataSource using SQLite.
 class IngoingValidationLocalDataSourceImpl
     implements IngoingValidationLocalDataSource {

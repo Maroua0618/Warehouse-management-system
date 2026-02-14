@@ -4,22 +4,21 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
+import '../datasources/auth_remote_datasource.dart';
 
 /// Implementation of AuthRepository.
-/// Currently always uses local database for authentication.
-/// Can be extended to support remote authentication when needed.
+/// Uses remote backend API for authentication.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalDataSource localDataSource;
-  // final AuthRemoteDataSource remoteDataSource; // For future remote auth
-  // final NetworkInfo networkInfo; // For future network check
+  final AuthRemoteDataSource remoteDataSource;
 
-  /// When true, always use local database regardless of network.
-  /// Set to false when remote authentication is implemented.
-  final bool useLocalOnly;
+  /// When true, uses remote backend API; false uses local database.
+  final bool useRemote;
 
   AuthRepositoryImpl({
     required this.localDataSource,
-    this.useLocalOnly = true, // Default to local-only for now
+    required this.remoteDataSource,
+    this.useRemote = true, // Default to remote backend
   });
 
   @override
@@ -27,25 +26,43 @@ class AuthRepositoryImpl implements AuthRepository {
     required String username,
     required String password,
   }) async {
-    // For now, always use local database
-    // In the future, check useLocalOnly and networkInfo.isConnected
-    // to decide between remote and local authentication
-
-    if (useLocalOnly) {
+    if (useRemote) {
+      return _loginRemote(email: username, password: password);
+    } else {
       return _loginLocal(username: username, password: password);
     }
-
-    // Future implementation for remote auth:
-    // if (await networkInfo.isConnected) {
-    //   return _loginRemote(username: username, password: password);
-    // } else {
-    //   return _loginLocal(username: username, password: password);
-    // }
-
-    return _loginLocal(username: username, password: password);
   }
 
-  /// Authenticate using local SQLite database.
+  /// Authenticate using remote backend API.
+  Future<Either<Failure, UserEntity>> _loginRemote({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final authResponse = await remoteDataSource.login(
+        email: email,
+        password: password,
+      );
+
+      final user = UserEntity(
+        userId: authResponse.userId,
+        email: authResponse.email,
+        fullName: authResponse.name,
+        role: authResponse.role,
+        status: 'ACTIVE',
+        backendToken: authResponse.backendToken,
+        supabaseToken: authResponse.supabaseToken,
+      );
+
+      return Right(user);
+    } on AuthException catch (e) {
+      return Left(UnauthorizedFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure('Erreur de connexion: ${e.toString()}'));
+    }
+  }
+
+  /// Authenticate using local SQLite database (fallback).
   Future<Either<Failure, UserEntity>> _loginLocal({
     required String username,
     required String password,
@@ -55,9 +72,6 @@ class AuthRepositoryImpl implements AuthRepository {
         username: username,
         password: password,
       );
-
-      // Cache the logged-in user
-      await localDataSource.cacheCurrentUser(user.userId);
 
       return Right(user);
     } on AuthException catch (e) {
@@ -72,7 +86,11 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      await localDataSource.clearCurrentUser();
+      if (useRemote) {
+        await remoteDataSource.logout();
+      } else {
+        await localDataSource.clearCurrentUser();
+      }
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure('Erreur de déconnexion: ${e.toString()}'));
@@ -82,8 +100,24 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, UserEntity?>> getCurrentUser() async {
     try {
-      final user = await localDataSource.getCachedCurrentUser();
-      return Right(user);
+      if (useRemote) {
+        final authResponse = await remoteDataSource.getCurrentUser();
+        if (authResponse == null) return const Right(null);
+
+        final user = UserEntity(
+          userId: authResponse.userId,
+          email: authResponse.email,
+          fullName: authResponse.name,
+          role: authResponse.role,
+          status: 'ACTIVE',
+          backendToken: authResponse.backendToken,
+          supabaseToken: authResponse.supabaseToken,
+        );
+        return Right(user);
+      } else {
+        final user = await localDataSource.getCachedCurrentUser();
+        return Right(user);
+      }
     } catch (e) {
       return Left(CacheFailure('Erreur de récupération: ${e.toString()}'));
     }

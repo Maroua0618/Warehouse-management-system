@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../shared/domain/entities/user_entity.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../domain/entities/command_entity.dart';
+import '../cubit/outgoing_execution_cubit.dart';
+import '../cubit/outgoing_execution_state.dart';
 import '../widgets/confirm_delivery_dialog.dart';
+import 'order_already_validated_page.dart';
 import 'report_issue_page.dart';
 
 class OutgoingExecutionPage extends StatefulWidget {
   final String orderId;
+  final UserEntity user;
 
-  const OutgoingExecutionPage({super.key, required this.orderId});
+  const OutgoingExecutionPage({
+    super.key,
+    required this.orderId,
+    required this.user,
+  });
 
   @override
   State<OutgoingExecutionPage> createState() => _OutgoingExecutionPageState();
@@ -16,48 +26,139 @@ class OutgoingExecutionPage extends StatefulWidget {
 
 class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
   @override
+  void initState() {
+    super.initState();
+    // Load execution data when page opens
+    context.read<OutgoingExecutionCubit>().loadExecution(widget.orderId);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with overlapping validation card
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Header (taller to accommodate overlap)
-                _buildHeader(),
-                // Validation card overlapping the header
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: -40,
-                  child: _buildValidationProcessCard(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 50), // Space for the overlapping card
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildDeliveryInfoRow(),
-                    const SizedBox(height: 20),
-                    _buildFinalDestination(),
-                    const SizedBox(height: 20),
-                    _buildPathResolved(),
-                  ],
-                ),
+    return BlocListener<OutgoingExecutionCubit, OutgoingExecutionState>(
+      listener: (context, state) {
+        if (state is OutgoingExecutionDeliveryConfirmed) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => OrderAlreadyValidatedPage(
+                orderId: widget.orderId,
+                isOutgoing: true,
+                deliveryId: state.command.displayOrderId,
+                skuReference: state.command.displayOrderId,
               ),
             ),
-            _buildBottomBar(),
-          ],
+          );
+        } else if (state is OutgoingExecutionCompleted) {
+          Navigator.of(context).pop(true);
+        } else if (state is OutgoingExecutionError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.failure,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: BlocBuilder<OutgoingExecutionCubit, OutgoingExecutionState>(
+            builder: (context, state) {
+              if (state is OutgoingExecutionLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+
+              if (state is OutgoingExecutionError &&
+                  state.previousCommand == null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: AppColors.failure,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(state.message, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context
+                            .read<OutgoingExecutionCubit>()
+                            .loadExecution(widget.orderId),
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final command = _getCommandFromState(state);
+
+              return Column(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      _buildHeader(),
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: -40,
+                        child: _buildValidationProcessCard(command),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 50),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDeliveryInfoRow(command),
+                          const SizedBox(height: 20),
+                          _buildFinalDestination(command),
+                          const SizedBox(height: 20),
+                          _buildItemsList(command),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _buildBottomBar(command),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
+  }
+
+  CommandEntity? _getCommandFromState(OutgoingExecutionState state) {
+    if (state is OutgoingExecutionLoaded) return state.command;
+    if (state is OutgoingExecutionProcessing) return state.currentCommand;
+    if (state is OutgoingExecutionItemPicked) return state.command;
+    if (state is OutgoingExecutionDeliveryConfirmed) return state.command;
+    if (state is OutgoingExecutionProblemReported) return state.command;
+    if (state is OutgoingExecutionError) return state.previousCommand;
+    return null;
+  }
+
+  String _statusToLabel(CommandStatus? status) {
+    switch (status) {
+      case CommandStatus.pending:
+        return 'EN ATTENTE';
+      case CommandStatus.inProgress:
+        return 'EN COURS';
+      case CommandStatus.completed:
+        return 'TERMINÉ';
+      case CommandStatus.cancelled:
+        return 'ANNULÉ';
+      case null:
+        return 'EN COURS';
+    }
   }
 
   Widget _buildHeader() {
@@ -69,123 +170,74 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
           bottomRight: Radius.circular(24),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        60,
-      ), // Extra bottom padding for overlap
-      child: Column(
-        children: [
-          Row(
-            children: [
-              // Back button
-              GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.textOnPrimary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Avatar
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.textOnPrimary.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    'CH',
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Employee info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'EMPLOYÉ',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.textOnPrimary.withOpacity(0.8),
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Nom Employé',
-                      style: AppTextStyles.cardTitle.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Notification icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.textOnPrimary.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.notifications_outlined,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Tab switcher
-          _buildTabSwitcher(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabSwitcher() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.textOnPrimary.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(50),
-      ),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 60),
       child: Row(
         children: [
-          Expanded(
-            child: _buildTab(
-              label: 'COMMANDES SORTANTES',
-              isSelected: true, // Always selected on outgoing page
-              onTap: () {}, // Already on outgoing
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.textOnPrimary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
+          const SizedBox(width: 12),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.textOnPrimary.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                widget.user.initials,
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: _buildTab(
-              label: 'COMMANDES ENTRANTES',
-              isSelected: false,
-              onTap: () {
-                // Navigate back to dashboard - user should go to main page to switch
-                Navigator.of(context).pop();
-              },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'EMPLOYÉ',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.textOnPrimary.withOpacity(0.8),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.user.fullName,
+                  style: AppTextStyles.cardTitle.copyWith(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.textOnPrimary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: Colors.white,
+              size: 22,
             ),
           ),
         ],
@@ -193,34 +245,9 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
     );
   }
 
-  Widget _buildTab({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(50),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: isSelected ? AppColors.primary : Colors.white,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildValidationProcessCard() {
+  Widget _buildValidationProcessCard(CommandEntity? command) {
+    final statusLabel = _statusToLabel(command?.status);
+    final orderLabel = command?.displayOrderId ?? widget.orderId;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -264,7 +291,7 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'EN COURS',
+                  statusLabel.toUpperCase(),
                   style: AppTextStyles.badge.copyWith(
                     color: AppColors.accent,
                     fontSize: 10,
@@ -276,10 +303,10 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Commande #${widget.orderId}',
+            'Commande #$orderLabel',
             style: AppTextStyles.cardTitle.copyWith(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -288,14 +315,16 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
     );
   }
 
-  Widget _buildDeliveryInfoRow() {
+  Widget _buildDeliveryInfoRow(CommandEntity? command) {
+    final deliveryId = command?.displayOrderId ?? '-';
+    final location = command?.displayLocation ?? '-';
     return Row(
       children: [
         Expanded(
           child: _buildInfoCard(
             icon: Icons.local_shipping_outlined,
             label: 'ID Livraison',
-            value: 'DEL-99283',
+            value: deliveryId,
           ),
         ),
         const SizedBox(width: 12),
@@ -303,7 +332,7 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
           child: _buildInfoCard(
             icon: Icons.layers_outlined,
             label: 'Emplacement',
-            value: 'B7-0A-01-05',
+            value: location,
           ),
         ),
       ],
@@ -357,8 +386,9 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
                   style: AppTextStyles.labelMedium.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -368,124 +398,8 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
     );
   }
 
-  Widget _buildPathResolved() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Chemin Résolu',
-          style: AppTextStyles.sectionHeader.copyWith(
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.success.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.success.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Chariot info row
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.local_shipping,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Chariot Assigné',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Text(
-                          'CHR-4492',
-                          style: AppTextStyles.labelLarge.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Estimated delay badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.bolt, color: Colors.white, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          '~5 min',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Path visualization
-              Container(
-                width: double.infinity,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.success.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SvgPicture.asset(
-                    'assets/path.svg',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFinalDestination() {
+  Widget _buildFinalDestination(CommandEntity? command) {
+    final destination = command?.displayLocation ?? '-';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -524,7 +438,7 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Rez-de-chaussée - Zone Expédition',
+                      destination,
                       style: AppTextStyles.cardTitle.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -532,37 +446,9 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Zone de chargement livraison',
+                      'Zone de chargement',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Prêt',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -575,7 +461,92 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildItemsList(CommandEntity? command) {
+    final items = command?.items ?? [];
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Articles (${items.length})',
+          style: AppTextStyles.sectionHeader.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...items.map(
+          (item) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.sku,
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Qté: ${item.quantity} • ${item.location ?? 'N/A'}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  item.isValidated
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: item.isValidated
+                      ? AppColors.success
+                      : AppColors.textSecondary,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomBar(CommandEntity? command) {
+    final itemCount = command?.items.length ?? 0;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -596,7 +567,8 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ReportIssuePage(),
+                    builder: (context) =>
+                        ReportIssuePage(orderId: widget.orderId),
                   ),
                 );
               },
@@ -609,7 +581,7 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
                 ),
               ),
               child: Text(
-                'SIGNALER PROBLÈME',
+                'SIGNALER',
                 style: AppTextStyles.labelMedium.copyWith(
                   color: AppColors.failure,
                   fontWeight: FontWeight.w600,
@@ -620,41 +592,60 @@ class _OutgoingExecutionPageState extends State<OutgoingExecutionPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (dialogContext) => ConfirmDeliveryDialog(
-                    deliveryId: 'DEL-99283',
-                    itemsVerified: 12,
-                    onValidate: () {
-                      Navigator.of(dialogContext).pop(); // Close dialog
-                      Navigator.of(
-                        context,
-                      ).pop(true); // Return to list with validated status
-                    },
-                    onBack: () {
-                      Navigator.of(dialogContext).pop();
-                    },
+            child: BlocBuilder<OutgoingExecutionCubit, OutgoingExecutionState>(
+              builder: (context, state) {
+                final isProcessing = state is OutgoingExecutionProcessing;
+                return ElevatedButton(
+                  onPressed: isProcessing
+                      ? null
+                      : () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => ConfirmDeliveryDialog(
+                              deliveryId:
+                                  command?.displayOrderId ?? widget.orderId,
+                              itemsVerified: itemCount,
+                              onValidate: () {
+                                Navigator.of(dialogContext).pop();
+                                context
+                                    .read<OutgoingExecutionCubit>()
+                                    .confirmDelivery();
+                              },
+                              onBack: () {
+                                Navigator.of(dialogContext).pop();
+                              },
+                            ),
+                          );
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
                   ),
+                  child: isProcessing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          'Valider',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Valider Livraison',
-                style: AppTextStyles.labelMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ),
         ],

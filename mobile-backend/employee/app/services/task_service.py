@@ -20,34 +20,58 @@ class TaskService:
     
     async def get_employee_tasks(self, user_id: str) -> TaskListResponse:
         """Get all tasks assigned to an employee."""
-        # Get tasks assigned to the user
-        response = self.db.table("operation_tasks")\
-            .select("""
-                *,
-                order:orders(id, type, status, created_at),
-                delivery:deliveries(delivery_id, status)
-            """)\
-            .eq("assigned_to_user_id", user_id)\
-            .in_("status", ["PENDING", "ASSIGNED", "IN_PROGRESS"])\
-            .order("created_at", desc=True)\
-            .execute()
+        try:
+            print(f"\n🔍 DEBUG: Fetching tasks for user_id: {user_id}")
+            
+            # Get tasks assigned to the user - include all statuses except CANCELLED
+            tasks_response = self.db.table("operation_tasks")\
+                .select("*")\
+                .eq("assigned_to_user_id", user_id)\
+                .in_("status", ["PENDING", "ASSIGNED", "IN_PROGRESS", "DONE"])\
+                .order("created_at", desc=True)\
+                .execute()
+            
+            print(f"📋 DEBUG: Found {len(tasks_response.data)} tasks in database")
+            
+            if tasks_response.data:
+                print(f"📋 DEBUG: First task: {tasks_response.data[0]}")
+            
+            ingoing_tasks = []
+            outgoing_tasks = []
+        except Exception as e:
+            print(f"❌ ERROR in get_employee_tasks: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
         
-        ingoing_tasks = []
-        outgoing_tasks = []
-        
-        for task in response.data:
+        for task in tasks_response.data:
+            # Get order info separately
+            order_response = self.db.table("orders")\
+                .select("id, type, status, created_at")\
+                .eq("id", task["order_id"])\
+                .execute()
+            
+            if not order_response.data:
+                continue
+            
+            order = order_response.data[0]
+            
             # Count items based on operation type
             item_count = await self._get_task_item_count(task["order_id"], task["operation_type"])
+            
+            # Get storage location
+            storage_location_info = await self._get_task_storage_location(task, order["type"])
             
             task_summary = TaskSummary(
                 id=task["id"],
                 order_id=task["order_id"],
-                order_type=OrderType(task["order"]["type"]),
+                order_type=OrderType(order["type"]),
                 status=TaskStatus(task["status"]),
                 operation_type=OperationType(task["operation_type"]),
                 created_at=datetime.fromisoformat(task["created_at"]),
                 item_count=item_count,
-                delivery_id=task["delivery_id"]
+                delivery_id=task.get("delivery_id"),
+                storage_location=storage_location_info
             )
             
             # Categorize as ingoing or outgoing
@@ -56,6 +80,8 @@ class TaskService:
             else:
                 outgoing_tasks.append(task_summary)
         
+        print(f"✅ DEBUG: Returning {len(ingoing_tasks)} ingoing, {len(outgoing_tasks)} outgoing tasks")
+        
         return TaskListResponse(
             ingoing_tasks=ingoing_tasks,
             outgoing_tasks=outgoing_tasks
@@ -63,24 +89,19 @@ class TaskService:
     
     async def get_task_detail(self, task_id: str, user_id: str) -> TaskDetail:
         """Get detailed task information."""
-        # Get task with related data
-        response = self.db.table("operation_tasks")\
-            .select("""
-                *,
-                order:orders(*),
-                chariot:chariots(*),
-                route:route_plans(*)
-            """)\
+        # Get task
+        task_response = self.db.table("operation_tasks")\
+            .select("*")\
             .eq("id", task_id)\
             .execute()
         
-        if not response.data:
+        if not task_response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
         
-        task = response.data[0]
+        task = task_response.data[0]
         
         # Verify task is assigned to this user
         if task["assigned_to_user_id"] != user_id:
@@ -89,42 +110,128 @@ class TaskService:
                 detail="Not authorized to view this task"
             )
         
+        # Get order info
+        order_response = self.db.table("orders")\
+            .select("*")\
+            .eq("id", task["order_id"])\
+            .execute()
+        
+        if not order_response.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Order not found"
+            )
+        
+        order = order_response.data[0]
+        
         # Get order items based on order type
-        items = await self._get_order_items(task["order"]["id"], task["order"]["type"])
+        items = await self._get_order_items(order["id"], order["type"])
         
         # Get product validation checklist
-        validations = await self._get_product_validations(task["order"]["id"])
+        validations = await self._get_product_validations(order["id"])
         
         # Build chariot info
         chariot_info = None
-        if task.get("chariot"):
-            chariot_info = ChariotInfo(
-                id=task["chariot"]["id"],
-                code=task["chariot"]["code"],
-                is_active=task["chariot"]["is_active"],
-                capacity=task["chariot"].get("capacity")
-            )
+        if task.get("chariot_id"):
+            chariot_response = self.db.table("chariots")\
+                .select("*")\
+                .eq("id", task["chariot_id"])\
+                .execute()
+            
+            if chariot_response.data:
+                chariot = chariot_response.data[0]
+                chariot_info = ChariotInfo(
+                    id=chariot["id"],
+                    code=chariot["code"],
+                    is_active=chariot["is_active"],
+                    capacity=chariot.get("capacity")
+                )
         
         # Build route info
         route_info = None
-        if task.get("route"):
-            route_data = task["route"]
-            path_nodes = [RouteNode(**node) for node in route_data.get("path_nodes_json", [])]
-            route_info = RoutePlan(
-                id=route_data["id"],
-                total_distance_meters=float(route_data["total_distance_meters"]),
-                path_nodes=path_nodes,
-                estimated_time_minutes=self._calculate_estimated_time(
-                    float(route_data["total_distance_meters"])
+        if task.get("planned_route_id"):
+            route_response = self.db.table("route_plans")\
+                .select("*")\
+                .eq("id", task["planned_route_id"])\
+                .execute()
+            
+            if route_response.data:
+                route_data = route_response.data[0]
+                path_nodes = [RouteNode(**node) for node in route_data.get("path_nodes_json", [])]
+                route_info = RoutePlan(
+                    id=route_data["id"],
+                    total_distance_meters=float(route_data["total_distance_meters"]),
+                    path_nodes=path_nodes,
+                    estimated_time_minutes=self._calculate_estimated_time(
+                        float(route_data["total_distance_meters"])
+                    )
                 )
-            )
+        
+        # Build storage location info based on operation type
+        storage_location_info = None
+        if task["operation_type"] in ["PICKING", "DELIVERY"]:
+            # For outgoing operations, get the expedition zone location
+            expedition_response = self.db.table("locations")\
+                .select("*")\
+                .eq("type", "EXPEDITION")\
+                .eq("is_active", True)\
+                .limit(1)\
+                .execute()
+            
+            if expedition_response.data:
+                loc = expedition_response.data[0]
+                storage_location_info = LocationInfo(
+                    id=loc["id"],
+                    code=loc["code"],
+                    type=loc["type"],
+                    floor_level=loc.get("floor_level"),
+                    row=loc.get("row_num"),
+                    col=loc.get("col_num")
+                )
+        elif task["operation_type"] == "RECEIPT":
+            # For RECEIPT, get a target storage location for the items
+            # Try to get a specific storage location from the database
+            storage_response = self.db.table("locations")\
+                .select("*")\
+                .eq("type", "STORAGE")\
+                .eq("is_active", True)\
+                .limit(1)\
+                .execute()
+            
+            if storage_response.data:
+                loc = storage_response.data[0]
+                storage_location_info = LocationInfo(
+                    id=loc["id"],
+                    code=loc["code"],
+                    type=loc["type"],
+                    floor_level=loc.get("floor_level"),
+                    row=loc.get("row_num"),
+                    col=loc.get("col_num")
+                )
+        elif task["operation_type"] == "TRANSFER":
+            # For TRANSFER, get destination from preparation order
+            prep_response = self.db.table("preparation_orders")\
+                .select("*, location:locations!destination_storage_location_id(*)")\
+                .eq("id", order["id"])\
+                .execute()
+            
+            if prep_response.data and prep_response.data[0].get("location"):
+                loc = prep_response.data[0]["location"]
+                storage_location_info = LocationInfo(
+                    id=loc["id"],
+                    code=loc["code"],
+                    type=loc["type"],
+                    floor_level=loc.get("floor_level"),
+                    row=loc.get("row_num"),
+                    col=loc.get("col_num")
+                )
         
         return TaskDetail(
             id=task["id"],
-            order_id=task["order"]["id"],
-            order_code=self._generate_order_code(task["order"]),
-            order_type=OrderType(task["order"]["type"]),
-            order_status=task["order"]["status"],
+            order_id=order["id"],
+            order_code=self._generate_order_code(order),
+            order_type=OrderType(order["type"]),
+            order_status=order["status"],
             status=TaskStatus(task["status"]),
             operation_type=OperationType(task["operation_type"]),
             created_at=datetime.fromisoformat(task["created_at"]),
@@ -133,6 +240,7 @@ class TaskService:
             chariot=chariot_info,
             route=route_info,
             delivery_id=task.get("delivery_id"),
+            storage_location=storage_location_info,
             items=items,
             product_validations=validations
         )
@@ -366,8 +474,74 @@ class TaskService:
         id_suffix = order["id"][-6:].upper()
         return f"{prefix}-{id_suffix}"
     
+    async def _get_task_storage_location(self, task: dict, order_type: str) -> Optional[LocationInfo]:
+        """Get storage location for a task based on operation type."""
+        try:
+            if task["operation_type"] in ["PICKING", "DELIVERY"]:
+                # For outgoing operations, get the expedition zone location
+                expedition_response = self.db.table("locations")\
+                    .select("*")\
+                    .eq("type", "EXPEDITION")\
+                    .eq("is_active", True)\
+                    .limit(1)\
+                    .execute()
+                
+                if expedition_response.data:
+                    loc = expedition_response.data[0]
+                    return LocationInfo(
+                        id=loc["id"],
+                        code=loc["code"],
+                        type=loc["type"],
+                        floor_level=loc.get("floor_level"),
+                        row=loc.get("row_num"),
+                        col=loc.get("col_num")
+                    )
+            
+            elif task["operation_type"] == "RECEIPT":
+                # For RECEIPT, get a target storage location
+                storage_response = self.db.table("locations")\
+                    .select("*")\
+                    .eq("type", "STORAGE")\
+                    .eq("is_active", True)\
+                    .limit(1)\
+                    .execute()
+                
+                if storage_response.data:
+                    loc = storage_response.data[0]
+                    return LocationInfo(
+                        id=loc["id"],
+                        code=loc["code"],
+                        type=loc["type"],
+                        floor_level=loc.get("floor_level"),
+                        row=loc.get("row_num"),
+                        col=loc.get("col_num")
+                    )
+            
+            elif task["operation_type"] == "TRANSFER":
+                # For TRANSFER, get destination from preparation order
+                prep_response = self.db.table("preparation_orders")\
+                    .select("*, location:locations!destination_storage_location_id(*)")\
+                    .eq("id", task["order_id"])\
+                    .execute()
+                
+                if prep_response.data and prep_response.data[0].get("location"):
+                    loc = prep_response.data[0]["location"]
+                    return LocationInfo(
+                        id=loc["id"],
+                        code=loc["code"],
+                        type=loc["type"],
+                        floor_level=loc.get("floor_level"),
+                        row=loc.get("row_num"),
+                        col=loc.get("col_num")
+                    )
+        except Exception as e:
+            print(f"⚠️ Warning: Could not get storage location for task {task['id']}: {e}")
+        
+        return None
+    
     def _calculate_estimated_time(self, distance_meters: float) -> int:
         """Calculate estimated time in minutes based on distance."""
         # Assume average walking speed of 1.2 m/s
         time_seconds = distance_meters / 1.2
         return int(time_seconds / 60) + 1  # Round up
+
