@@ -1,62 +1,97 @@
-// Model for Bon de commande (Command Order)
+/// Represents a single product line in a delivery
+class ProductLine {
+  final String sku;
+  final int quantityReceived;
+
+  const ProductLine({required this.sku, required this.quantityReceived});
+
+  /// Create from Supabase JSON
+  factory ProductLine.fromJson(Map<String, dynamic> json) {
+    return ProductLine(
+      sku: json['sku'] as String,
+      quantityReceived: json['quantity_received'] as int,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'sku': sku, 'quantity_received': quantityReceived};
+  }
+
+  ProductLine copyWith({String? sku, int? quantityReceived}) {
+    return ProductLine(
+      sku: sku ?? this.sku,
+      quantityReceived: quantityReceived ?? this.quantityReceived,
+    );
+  }
+}
+
+/// Represents a Bon de Commande (Command Order/Delivery Note)
 class CommandOrder {
   final String deliveryId;
-  final DateTime receptionAt;
-  final List<CommandOrderItem> items;
+  final List<ProductLine> products;
+  final DateTime scheduledReception;
+  final String? bay; // Bay location (e.g., "Bay 4", "Bay 12")
 
-  CommandOrder({
+  const CommandOrder({
     required this.deliveryId,
-    required this.receptionAt,
-    required this.items,
+    required this.products,
+    required this.scheduledReception,
+    this.bay,
   });
 
+  /// Create from Supabase JSON
+  /// Expected JSON structure:
+  /// {
+  ///   "delivery_id": "DLV-882910",
+  ///   "products": [{"sku": "442", "quantity_received": 1240}, ...],
+  ///   "scheduled_reception": "2026-02-13T09:30:00Z",
+  ///   "bay": "Bay 4"
+  /// }
   factory CommandOrder.fromJson(Map<String, dynamic> json) {
+    final productList =
+        (json['products'] as List<dynamic>?)
+            ?.map((p) => ProductLine.fromJson(p as Map<String, dynamic>))
+            .toList() ??
+        [];
+
     return CommandOrder(
-      deliveryId: json['delivery_id'] ?? '',
-      receptionAt: json['reception_at'] != null
-          ? DateTime.parse(json['reception_at'])
-          : DateTime.now(),
-      items:
-          (json['items'] as List<dynamic>?)
-              ?.map((item) => CommandOrderItem.fromJson(item))
-              .toList() ??
-          [],
+      deliveryId: json['delivery_id'] as String,
+      products: productList,
+      scheduledReception: DateTime.parse(json['scheduled_reception'] as String),
+      bay: json['bay'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'delivery_id': deliveryId,
-      'reception_at': receptionAt.toIso8601String(),
-      'items': items.map((item) => item.toJson()).toList(),
+      'products': products.map((p) => p.toJson()).toList(),
+      'scheduled_reception': scheduledReception.toIso8601String(),
+      'bay': bay,
     };
   }
-}
 
-class CommandOrderItem {
-  final String productIdentifier; // Can be SKU code or ID
-  final int quantityReceived;
-  final String? productName;
+  /// Total quantity across all products
+  int get totalQuantity {
+    return products.fold(0, (sum, product) => sum + product.quantityReceived);
+  }
 
-  CommandOrderItem({
-    required this.productIdentifier,
-    required this.quantityReceived,
-    this.productName,
-  });
+  /// Format product SKUs for display (e.g., "SKU-442, SKU-109, SKU-882")
+  String get productSkusFormatted {
+    return products.map((p) => 'SKU-${p.sku}').join(', ');
+  }
 
-  factory CommandOrderItem.fromJson(Map<String, dynamic> json) {
-    return CommandOrderItem(
-      productIdentifier: json['product_identifier'] ?? json['sku_code'] ?? '',
-      quantityReceived: json['quantity_received'] ?? json['qty'] ?? 0,
-      productName: json['product_name'],
+  CommandOrder copyWith({
+    String? deliveryId,
+    List<ProductLine>? products,
+    DateTime? scheduledReception,
+    String? bay,
+  }) {
+    return CommandOrder(
+      deliveryId: deliveryId ?? this.deliveryId,
+      products: products ?? this.products,
+      scheduledReception: scheduledReception ?? this.scheduledReception,
+      bay: bay ?? this.bay,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'product_identifier': productIdentifier,
-      'quantity_received': quantityReceived,
-      'product_name': productName,
-    };
   }
 }

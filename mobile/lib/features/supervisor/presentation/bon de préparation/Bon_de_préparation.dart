@@ -1,12 +1,99 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../widgets/bottom_nav_bar.dart';
-import '../pages/supervisor_dashboard.dart';
-import '../pages/calendar.dart';
+import '../widgets/action_buttons.dart';
+import '../../data/models/bon_de_preparation_model.dart';
+import 'approve_assign_screen.dart';
+import 'override_forecast_screen.dart';
 
-class PreparationSlipsScreen extends StatelessWidget {
+class PreparationSlipsScreen extends StatefulWidget {
   const PreparationSlipsScreen({Key? key}) : super(key: key);
+
+  @override
+  State<PreparationSlipsScreen> createState() => _PreparationSlipsScreenState();
+}
+
+class _PreparationSlipsScreenState extends State<PreparationSlipsScreen> {
+  // Mock data - replace with actual API calls
+  late List<BonDePreparation> preparations;
+
+  @override
+  void initState() {
+    super.initState();
+    preparations = [
+      BonDePreparation(
+        deliveryId: 'DLV-2026-0001',
+        items: [
+          PreparationItem(
+            productIdentifier: 'SKU-88291',
+            quantity: 24,
+            storageLocation: StorageLocation(
+              zone: 'Zone A-12',
+              shelf: 'Shelf 04',
+            ),
+            zone: 'Zone A-12',
+            shelf: 'Shelf 04',
+          ),
+          PreparationItem(
+            productIdentifier: 'SKU-11405',
+            quantity: 12,
+            storageLocation: StorageLocation(
+              zone: 'Zone C-05',
+              shelf: 'Shelf 01',
+            ),
+            zone: 'Zone C-05',
+            shelf: 'Shelf 01',
+          ),
+        ],
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ),
+      BonDePreparation(
+        deliveryId: 'DLV-2026-0002',
+        items: [
+          PreparationItem(
+            productIdentifier: 'SKU-99022',
+            quantity: 50,
+            storageLocation: StorageLocation(
+              zone: 'Zone B-22',
+              shelf: 'Shelf 09',
+            ),
+            zone: 'Zone B-22',
+            shelf: 'Shelf 09',
+          ),
+        ],
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ),
+      BonDePreparation(
+        deliveryId: 'DLV-2026-0003',
+        items: [
+          PreparationItem(
+            productIdentifier: 'SKU-44120',
+            quantity: 100,
+            storageLocation: StorageLocation(
+              zone: 'Zone A-01',
+              shelf: 'Shelf 03',
+            ),
+            zone: 'Zone A-01',
+            shelf: 'Shelf 03',
+          ),
+          PreparationItem(
+            productIdentifier: 'SKU-33219',
+            quantity: 5,
+            storageLocation: StorageLocation(
+              zone: 'Zone D-15',
+              shelf: 'Shelf 02',
+            ),
+            zone: 'Zone D-15',
+            shelf: 'Shelf 02',
+          ),
+        ],
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,81 +114,23 @@ class PreparationSlipsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: ListView(
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        children: [
-          _buildDeliveryCard(
-            deliveryId: 'BP-2026-001',
-            items: [
-              {
-                'sku': 'SKU-88291',
-                'location': 'Zone A-12 • Shelf 04',
-                'qty': 24,
-              },
-              {
-                'sku': 'SKU-11405',
-                'location': 'Zone C-05 • Shelf 01',
-                'qty': 12,
-              },
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildDeliveryCard(
-            deliveryId: 'BP-2026-002',
-            items: [
-              {
-                'sku': 'SKU-99022',
-                'location': 'Zone B-22 • Shelf 09',
-                'qty': 50,
-              },
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildDeliveryCard(
-            deliveryId: 'BP-2026-003',
-            items: [
-              {
-                'sku': 'SKU-44120',
-                'location': 'Zone A-01 • Shelf 03',
-                'qty': 100,
-              },
-              {
-                'sku': 'SKU-33219',
-                'location': 'Zone D-15 • Shelf 02',
-                'qty': 5,
-              },
-            ],
-          ),
-          const SizedBox(height: 80),
-        ],
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SupervisorDashboardScreen(),
-              ),
-            );
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AIDecisionsEmptyScreen(),
-              ),
-            );
-          }
+        itemCount: preparations.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildDeliveryCard(context, preparations[index]),
+          );
         },
       ),
     );
   }
 
-  Widget _buildDeliveryCard({
-    required String deliveryId,
-    required List<Map<String, dynamic>> items,
-  }) {
+  Widget _buildDeliveryCard(
+    BuildContext context,
+    BonDePreparation preparation,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -111,43 +140,12 @@ class PreparationSlipsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'ID LIVRAISON',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                Text(
-                  deliveryId,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1),
-
           // Items
-          ...items.asMap().entries.map((entry) {
-            final isLast = entry.key == items.length - 1;
+          ...preparation.items.asMap().entries.map((entry) {
+            final isLast = entry.key == preparation.items.length - 1;
             return Column(
               children: [
-                _buildItemRow(
-                  sku: entry.value['sku'],
-                  location: entry.value['location'],
-                  qty: entry.value['qty'],
-                ),
+                _buildItemRow(entry.value),
                 if (!isLast) const Divider(height: 1, indent: 72),
               ],
             );
@@ -156,54 +154,35 @@ class PreparationSlipsScreen extends StatelessWidget {
           const Divider(height: 1),
 
           // Action Buttons
-          Padding(
+          ButtonRow(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      'Approuver',
-                      style: AppTextStyles.button.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+            primaryButton: PrimaryButton(
+              label: 'Approuver',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ApproveAssignScreen(bonDePreparation: preparation),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: BorderSide(color: AppColors.primary, width: 1.5),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      'Remplacer',
-                      style: AppTextStyles.button.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                );
+              },
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              borderRadius: 8,
+            ),
+            secondaryButton: SecondaryButton(
+              label: 'Remplacer',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        OverrideForecastScreen(bonDePreparation: preparation),
                   ),
-                ),
-              ],
+                );
+              },
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              borderRadius: 8,
             ),
           ),
         ],
@@ -211,11 +190,7 @@ class PreparationSlipsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildItemRow({
-    required String sku,
-    required String location,
-    required int qty,
-  }) {
+  Widget _buildItemRow(PreparationItem item) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -239,7 +214,7 @@ class PreparationSlipsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  sku,
+                  item.productIdentifier,
                   style: AppTextStyles.labelLarge.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -247,7 +222,7 @@ class PreparationSlipsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  location,
+                  item.fullLocation,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -259,7 +234,7 @@ class PreparationSlipsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'x$qty',
+                'x${item.quantity}',
                 style: AppTextStyles.sectionHeader.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,

@@ -18,6 +18,9 @@ async def get_dashboard_stats(supabase: Client = Depends(get_supabase)):
     async def fetch_active_employees():
         try:
             result = supabase.table("users").select("id", count="exact").eq("role", "EMPLOYEE").eq("status", "ACTIVE").execute()
+            print(f"DEBUG - Active employees query result: {result}")
+            print(f"DEBUG - Result data: {result.data}")
+            print(f"DEBUG - Result count: {result.count}")
             return result.count if result.count is not None else 0
         except Exception as e:
             print(f"Error fetching active employees: {e}")
@@ -201,3 +204,17 @@ def dismiss_operational_issue(
         raise HTTPException(status_code=404, detail="Issue not found")
     
     return {"message": "Issue dismissed successfully"}
+
+@router.get("/debug/users")
+def debug_users(supabase: Client = Depends(get_supabase)):
+    """Debug endpoint to check all users in the database"""
+    try:
+        result = supabase.table("users").select("*").execute()
+        print(f"DEBUG - All users: {result.data}")
+        return {
+            "count": len(result.data),
+            "users": result.data
+        }
+    except Exception as e:
+        print(f"Error fetching users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

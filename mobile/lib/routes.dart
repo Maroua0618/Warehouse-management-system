@@ -4,7 +4,6 @@ import 'features/shared/presentation/pages/onboarding.dart';
 import 'features/shared/presentation/pages/login.dart';
 import 'features/employee/presentation/pages/employee_dashboard.dart';
 import 'features/supervisor/presentation/pages/supervisor_dashboard.dart';
-import 'features/shared/presentation/pages/bon_de_commande_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -21,7 +20,6 @@ class AppRoutes {
       login: (context) => const LoginPage(),
       employee: (context) => const EmployeeDashboard(),
       supervisor: (context) => const SupervisorDashboardScreen(),
-      bonDeCommande: (context) => const BonDeCommandePage(),
     };
   }
 

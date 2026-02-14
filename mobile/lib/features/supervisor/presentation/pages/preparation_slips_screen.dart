@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../widgets/bottom_nav_bar.dart';
-import 'supervisor_dashboard.dart';
-import 'calendar.dart';
 
 class PreparationSlipsScreen extends StatelessWidget {
   const PreparationSlipsScreen({Key? key}) : super(key: key);
@@ -74,26 +71,6 @@ class PreparationSlipsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 80),
         ],
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SupervisorDashboardScreen(),
-              ),
-            );
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AIDecisionsEmptyScreen(),
-              ),
-            );
-          }
-        },
       ),
     );
   }

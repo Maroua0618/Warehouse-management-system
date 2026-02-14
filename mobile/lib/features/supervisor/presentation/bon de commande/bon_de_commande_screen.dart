@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../widgets/bottom_nav_bar.dart';
 import '../../data/models/command_order_model.dart';
 import 'command_order_card.dart';
-import '../pages/supervisor_dashboard.dart';
-import '../pages/calendar.dart';
 
 /// Main page for Bon de commande (Command Orders/Purchase Orders)
 /// Displays delivery orders with product SKUs, quantities, and reception times
@@ -69,28 +66,19 @@ class _BonDeCommandeScreenState extends State<BonDeCommandeScreen> {
     return [
       CommandOrder(
         deliveryId: '#DLV-882910',
-        receptionAt: DateTime(2026, 2, 13, 9, 30),
-        items: [
-          CommandOrderItem(
-            productIdentifier: 'SKU-442',
-            quantityReceived: 1240,
-          ),
-          CommandOrderItem(
-            productIdentifier: 'SKU-109',
-            quantityReceived: 1240,
-          ),
-          CommandOrderItem(
-            productIdentifier: 'SKU-882',
-            quantityReceived: 1240,
-          ),
+        scheduledReception: DateTime(2026, 2, 13, 9, 30),
+        products: [
+          ProductLine(sku: 'SKU-442', quantityReceived: 1240),
+          ProductLine(sku: 'SKU-109', quantityReceived: 1240),
+          ProductLine(sku: 'SKU-882', quantityReceived: 1240),
         ],
       ),
       CommandOrder(
         deliveryId: '#DLV-882915',
-        receptionAt: DateTime(2026, 2, 13, 11, 15),
-        items: [
-          CommandOrderItem(productIdentifier: 'SKU-201', quantityReceived: 850),
-          CommandOrderItem(productIdentifier: 'SKU-554', quantityReceived: 850),
+        scheduledReception: DateTime(2026, 2, 13, 11, 15),
+        products: [
+          ProductLine(sku: 'SKU-201', quantityReceived: 850),
+          ProductLine(sku: 'SKU-554', quantityReceived: 850),
         ],
       ),
     ];
@@ -114,7 +102,6 @@ class _BonDeCommandeScreenState extends State<BonDeCommandeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(currentIndex: 2, onTap: _onNavBarTap),
     );
   }
 
@@ -257,193 +244,8 @@ class _BonDeCommandeScreenState extends State<BonDeCommandeScreen> {
         }
 
         final order = _orders[index];
-        return CommandOrderCard(
-          order: order,
-          onTap: () => _showOrderDetails(order),
-        );
+        return CommandOrderCard(order: order);
       },
     );
-  }
-
-  void _showOrderDetails(CommandOrder order) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildOrderDetailsSheet(order),
-    );
-  }
-
-  Widget _buildOrderDetailsSheet(CommandOrder order) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildSheetHandle(),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Détails du bon de commande',
-                    style: AppTextStyles.sectionHeader.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Produits',
-                    style: AppTextStyles.sectionHeader.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...order.items.map((item) => _buildDetailProductItem(item)),
-                  const SizedBox(height: 24),
-                  _buildActionButtons(order),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSheetHandle() {
-    return Container(
-      margin: const EdgeInsets.only(top: 12, bottom: 16),
-      width: 40,
-      height: 4,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE5E7EB),
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  Widget _buildDetailProductItem(CommandOrderItem item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.inventory_2_outlined,
-              color: const Color(0xFF0891B2),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.productIdentifier,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.quantityReceived} unités',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(CommandOrder order) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: Color(0xFFE5E7EB)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Fermer',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              // TODO: Implement validate action
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0891B2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Valider',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _onNavBarTap(int index) {
-    if (index == 0) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const SupervisorDashboardScreen(),
-        ),
-      );
-    } else if (index == 1) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AIDecisionsEmptyScreen()),
-      );
-    }
   }
 }

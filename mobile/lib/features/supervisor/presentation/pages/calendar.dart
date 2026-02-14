@@ -7,6 +7,7 @@ import '../widgets/empty_state_widget.dart';
 import 'supervisor_dashboard.dart';
 import '../bon de préparation/Bon_de_préparation.dart';
 import '../bon de commande/bon_de_commande_screen.dart';
+import '../storage/storage_moves_page.dart';
 
 class AIDecisionsEmptyScreen extends StatefulWidget {
   const AIDecisionsEmptyScreen({Key? key}) : super(key: key);
@@ -97,7 +98,7 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
             icon: Icons.description_outlined,
             title: 'Bon de commande',
             subtitle: 'Purchase orders review',
-            count: 2,
+            count: 2, // 2 items in _getMockOrders()
             color: const Color(0xFF0891B2),
             onTap: () {
               Navigator.push(
@@ -114,7 +115,7 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
             icon: Icons.assignment_outlined,
             title: 'Bon de préparation',
             subtitle: 'Preparation slips',
-            count: 5,
+            count: 3, // 3 items in preparations list
             color: const Color(0xFF0891B2),
             onTap: () {
               Navigator.push(
@@ -128,20 +129,25 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
           const SizedBox(height: 12),
           _buildDecisionTypeCard(
             icon: Icons.inventory_2_outlined,
-            title: 'Storage',
+            title: 'Mouvements de Stock',
             subtitle: 'Inventory placement AI',
-            count: 3,
+            count: 3, // 3 items in _moves list
             color: const Color(0xFF0891B2),
             onTap: () {
-              // Navigate to storage
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StorageMovesPage(),
+                ),
+              );
             },
           ),
           const SizedBox(height: 12),
           _buildDecisionTypeCard(
             icon: Icons.route_outlined,
-            title: 'Picking Route',
+            title: 'Itinéraire de Prélèvement',
             subtitle: 'Optimal path optimization',
-            count: 8,
+            count: 0, // Not yet implemented
             color: const Color(0xFF0891B2),
             onTap: () {
               // Navigate to picking route
@@ -162,52 +168,57 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         ),
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: AppTextStyles.labelLarge.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 17,
+                      fontSize: 15,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 12),
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               child: Center(
                 child: Text(
@@ -215,15 +226,16 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
                   style: AppTextStyles.labelLarge.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
+                    fontSize: 15,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Icon(
               Icons.arrow_forward_ios,
               color: AppColors.textSecondary,
-              size: 16,
+              size: 14,
             ),
           ],
         ),

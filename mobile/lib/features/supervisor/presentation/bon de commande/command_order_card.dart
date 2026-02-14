@@ -76,7 +76,9 @@ class CommandOrderCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                DateFormat('HH:mm - dd/MM/yyyy').format(order.receptionAt),
+                DateFormat(
+                  'HH:mm - dd/MM/yyyy',
+                ).format(order.scheduledReception),
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -91,11 +93,11 @@ class CommandOrderCard extends StatelessWidget {
 
   Widget _buildProductsList() {
     return Column(
-      children: order.items.map((item) => _buildProductItem(item)).toList(),
+      children: order.products.map((item) => _buildProductItem(item)).toList(),
     );
   }
 
-  Widget _buildProductItem(CommandOrderItem item) {
+  Widget _buildProductItem(ProductLine item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -134,22 +136,12 @@ class CommandOrderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      item.productIdentifier,
+                      item.sku,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (item.productName != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        item.productName!,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
