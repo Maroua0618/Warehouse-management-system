@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
 import Navbar from '@/components/dashboard/navbar';
 import UsersTable from '@/components/users/users-table';
@@ -7,6 +7,11 @@ import UserForm from '@/components/users/user-form';
 
 export default function UsersPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleSuccess = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-[#F1F4F9] relative overflow-hidden">
@@ -18,7 +23,10 @@ export default function UsersPage() {
 
         <main className="p-8">
           {/* Main User Management Table */}
-          <UsersTable onCreateClick={() => setIsDrawerOpen(true)} />
+          <UsersTable 
+            onCreateClick={() => setIsDrawerOpen(true)}
+            key={refreshTrigger}
+          />
         </main>
       </div>
 
@@ -36,7 +44,10 @@ export default function UsersPage() {
         isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         {isDrawerOpen && (
-          <UserForm onClose={() => setIsDrawerOpen(false)} />
+          <UserForm 
+            onClose={() => setIsDrawerOpen(false)}
+            onSuccess={handleSuccess}
+          />
         )}
       </div>
     </div>

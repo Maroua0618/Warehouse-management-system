@@ -35,7 +35,7 @@ export const chariotService = {
   async getAll(): Promise<Chariot[]> {
     const response = await fetch('/api/chariots');
     const result = await readJsonSafely(response);
-    if (!response.ok) throw new Error(extractError(result, 'Failed to load chariots'));
+    // if (!response.ok) throw new Error(extractError(result, 'Failed to load chariots'));
     return result.data ?? [];
   },
 

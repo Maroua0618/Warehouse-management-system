@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { X, Warehouse, MapPin, Hash, Layers } from 'lucide-react';
 import { warehouseService } from '@/services/warehouses';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface WarehouseFormProps {
   onClose: () => void;
@@ -9,6 +10,7 @@ interface WarehouseFormProps {
 }
 
 export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps) {
+  const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,7 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
 
   const handleSave = async () => {
     if (!code.trim() || !name.trim()) {
-      setError('Code and name are required');
+      setError(t('warehouseForm', 'codeAndNameRequired'));
       return;
     }
 
@@ -44,7 +46,7 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
           </div>
           <div>
             <h2 className="text-xl font-space-grotesk font-bold text-[#08677A]">MobAI BMS</h2>
-            <p className="text-[10px] font-inter font-bold text-slate-400 uppercase tracking-widest">Infrastructure Setup</p>
+            <p className="text-[10px] font-inter font-bold text-slate-400 uppercase tracking-widest">{t('warehouseForm', 'infrastructureSetup')}</p>
           </div>
         </div>
         <button 
@@ -62,12 +64,12 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
         <div className="space-y-5">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-500 tracking-widest uppercase font-inter flex items-center gap-2">
-              <Warehouse size={12} /> Warehouse Name
+              <Warehouse size={12} /> {t('warehouseForm', 'warehouseName')}
             </label>
             <input 
               type="text" 
-              placeholder="e.g. Algiers Central Hub"
-              className="w-full p-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-[#08677A]/10 outline-none font-inter text-sm transition-all"
+              placeholder={t('warehouseForm', 'warehouseNamePlaceholder')}
+              className="w-full p-4 rounded-2xl border border-slate-200 focus:border-[#08677A] focus:ring-2 focus:ring-[#08677A]/20 outline-none font-inter text-sm text-[#1A1C1E] placeholder:text-slate-300 transition-all"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -75,12 +77,12 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
 
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-500 tracking-widest uppercase font-inter flex items-center gap-2">
-              <Hash size={12} /> System Code (UID)
+              <Hash size={12} /> {t('warehouseForm', 'systemCode')}
             </label>
             <input 
               type="text" 
-              placeholder="DZ-AL-01"
-              className="w-full p-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-[#08677A]/10 outline-none font-mono text-sm uppercase transition-all"
+              placeholder={t('warehouseForm', 'systemCodePlaceholder')}
+              className="w-full p-4 rounded-2xl border border-slate-200 focus:border-[#08677A] focus:ring-2 focus:ring-[#08677A]/20 outline-none font-mono text-sm text-[#1A1C1E] uppercase placeholder:text-slate-300 placeholder:normal-case transition-all"
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
@@ -90,7 +92,7 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
         {/* Structural Configuration */}
         <div className="space-y-4 pt-4 border-t border-slate-50">
           <label className="text-[10px] font-bold text-slate-500 tracking-widest uppercase font-inter flex items-center gap-2">
-            <Layers size={12} /> Initial Floor Setup
+            <Layers size={12} /> {t('warehouseForm', 'initialFloorSetup')}
           </label>
           <div className="grid grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((num) => (
@@ -102,17 +104,17 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
               </label>
             ))}
           </div>
-          <p className="text-[10px] text-slate-400 font-inter italic">You can add more floors dynamically in the manager.</p>
+          <p className="text-[10px] text-slate-400 font-inter italic">{t('warehouseForm', 'floorNote')}</p>
         </div>
 
         {/* Location / Geography */}
         <div className="space-y-2 pt-4 border-t border-slate-50">
           <label className="text-[10px] font-bold text-slate-500 tracking-widest uppercase font-inter flex items-center gap-2">
-            <MapPin size={12} /> Physical Address
+            <MapPin size={12} /> {t('warehouseForm', 'physicalAddress')}
           </label>
           <textarea 
-            placeholder="Enter the full street address or GPS coordinates..."
-            className="w-full p-4 h-28 rounded-2xl border border-slate-200 text-sm font-inter outline-none focus:border-[#08677A] resize-none transition-all"
+            placeholder={t('warehouseForm', 'addressPlaceholder')}
+            className="w-full p-4 h-28 rounded-2xl border border-slate-200 text-sm font-inter text-[#1A1C1E] outline-none focus:border-[#08677A] focus:ring-2 focus:ring-[#08677A]/20 placeholder:text-slate-300 resize-none transition-all"
           />
         </div>
 
@@ -131,14 +133,14 @@ export default function WarehouseForm({ onClose, onCreated }: WarehouseFormProps
           disabled={loading}
           className="flex-1 py-4 rounded-2xl border border-slate-200 font-inter font-bold text-sm text-slate-600 hover:bg-white hover:shadow-sm transition-all"
         >
-          Discard
+          {t('common', 'discard')}
         </button>
         <button 
           onClick={handleSave}
           disabled={loading}
           className="flex-1 py-4 rounded-2xl bg-[#08677A] text-white font-inter font-bold text-sm shadow-lg shadow-[#08677A]/20 hover:bg-[#065464] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Saving...' : 'Save Facility'}
+          {loading ? t('warehouseForm', 'saving') : t('warehouseForm', 'saveFacility')}
         </button>
       </div>
     </div>

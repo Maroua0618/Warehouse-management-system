@@ -2,6 +2,7 @@
 import React from 'react';
 import { Warehouse, Map, Trash2 } from 'lucide-react';
 import { WarehouseWithSummary } from '@/services/warehouses';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface WarehouseTableProps {
   warehouses: WarehouseWithSummary[];
@@ -10,6 +11,8 @@ interface WarehouseTableProps {
 }
 
 export default function WarehouseTable({ warehouses, onManageFloors, onDeleteClick }: WarehouseTableProps) {
+  const { t } = useLanguage();
+
   if (warehouses.length === 0) {
     return (
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden font-inter">
@@ -17,8 +20,8 @@ export default function WarehouseTable({ warehouses, onManageFloors, onDeleteCli
           <div className="p-4 bg-slate-50 rounded-2xl w-fit mx-auto mb-4">
             <Warehouse className="h-12 w-12 text-slate-300" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-2">No warehouses found</h3>
-          <p className="text-sm text-slate-500">Get started by creating your first facility.</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">{t('warehouse', 'noWarehouses')}</h3>
+          <p className="text-sm text-slate-500">{t('warehouse', 'noWarehousesDesc')}</p>
         </div>
       </div>
     );
@@ -29,9 +32,9 @@ export default function WarehouseTable({ warehouses, onManageFloors, onDeleteCli
       <table className="w-full text-left">
         <thead>
           <tr className="bg-slate-50/50 border-b border-slate-100">
-            <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Facility Detail</th>
-            <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Levels</th>
-            <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+            <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">{t('warehouse', 'facilityDetail')}</th>
+            <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">{t('warehouse', 'levels')}</th>
+            <th className="px-8 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">{t('common', 'actions')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
@@ -50,7 +53,7 @@ export default function WarehouseTable({ warehouses, onManageFloors, onDeleteCli
               </td>
               <td className="px-8 py-5 text-center">
                 <span className="font-space-grotesk font-bold text-lg text-[#08677A]">{wh.floors_count}</span>
-                <p className="text-[9px] font-bold text-slate-400 uppercase">Floors</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase">{t('warehouse', 'floors')}</p>
               </td>
               <td className="px-8 py-5">
                 <div className="flex justify-end gap-3">
@@ -58,7 +61,7 @@ export default function WarehouseTable({ warehouses, onManageFloors, onDeleteCli
                     onClick={() => onManageFloors(wh)}
                     className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#08677A] text-white text-xs font-bold shadow-sm hover:bg-[#065464] transition-all"
                   >
-                    <Map size={14} /> Manage Floors
+                    <Map size={14} /> {t('warehouse', 'manageFloors')}
                   </button>
                   <button 
                     onClick={() => onDeleteClick(wh)}

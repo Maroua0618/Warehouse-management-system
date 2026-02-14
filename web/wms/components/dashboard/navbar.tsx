@@ -31,7 +31,7 @@ export default function Navbar() {
         {/* User Profile */}
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="font-space-grotesk font-bold text-[#1A1C1E] text-sm">Superadmin</p>
+            <p className="font-space-grotesk font-bold text-[#1A1C1E] text-sm">Admin</p>
             <p className="font-mono text-[10px] text-slate-500 uppercase">ID: 0x88912</p>
           </div>
         </div>

@@ -40,7 +40,7 @@ export const productService = {
   async getAll(): Promise<Product[]> {
     const response = await fetch('/api/products');
     const result = await readJsonSafely(response);
-    if (!response.ok) throw new Error(extractError(result, 'Failed to load products'));
+    // if (!response.ok) throw new Error(extractError(result, 'Failed to load products'));
     return result.data ?? [];
   },
 

@@ -23,7 +23,7 @@ export default function ChariotsPage() {
         setChariots(res.data || []);
       } else {
         // If DB fetch fails, we keep the list empty but don't crash
-        console.error("Database fetch failed, operating in local mode");
+        // console.error("Database fetch failed, operating in local mode");
       }
     } catch (err) {
       console.error("Critical error during fetch:", err);

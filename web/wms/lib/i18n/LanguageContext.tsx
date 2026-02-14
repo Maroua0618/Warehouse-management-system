@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Locale, t as translate } from './translations';
+import type { Locale } from './translations';
+import translations from './translations';
 
 interface LanguageContextType {
   locale: Locale;
@@ -12,17 +13,19 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType>({
   locale: 'en',
   setLocale: () => {},
-  t: (section, key) => key,
+  t: (_section, key) => key,
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('wms-locale') as Locale;
-    if (saved && (saved === 'en' || saved === 'fr')) {
+    const saved = localStorage.getItem('wms-locale');
+    if (saved === 'en' || saved === 'fr') {
       setLocaleState(saved);
     }
+    setMounted(true);
   }, []);
 
   const setLocale = (newLocale: Locale) => {
@@ -30,9 +33,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('wms-locale', newLocale);
   };
 
-  const t = (section: string, key: string) => {
-    return translate(section as any, key, locale);
+  const t = (section: string, key: string): string => {
+    const sectionData = translations[section];
+    if (!sectionData || !sectionData[key]) {
+      return key;
+    }
+    return sectionData[key][locale] || sectionData[key]['en'] || key;
   };
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <LanguageContext.Provider value={{ locale, setLocale, t }}>
@@ -42,9 +53,5 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
-  return context;
+  return useContext(LanguageContext);
 }

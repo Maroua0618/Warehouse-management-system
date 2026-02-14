@@ -30,7 +30,7 @@ export default function Sidebar() {
             <Warehouse size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="font-space-grotesk font-bold text-lg leading-tight">MobAI BMS</h1>
+            <h1 className="font-space-grotesk font-bold text-lg leading-tight">BMS WMS</h1>
             <p className="font-inter text-[10px] tracking-widest text-white/60 uppercase">Enterprise Admin</p>
           </div>
         </div>
