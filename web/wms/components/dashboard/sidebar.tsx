@@ -15,7 +15,7 @@ const navItems = [
   { name: 'Products', href: '/dashboard/products', icon: Package },
   { name: 'Overrides', href: '/dashboard/overrides', icon: ShieldAlert },
   { name: 'Audit Logs', href: '/dashboard/audit-logs', icon: ClipboardList },
-  // { name: 'Inventory', href: '/dashboard/inventory', icon: Box },
+  { name: 'Chariots', href: '/dashboard/chariots', icon: Box },
 ];
 
 export default function Sidebar() {
