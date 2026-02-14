@@ -1,17 +1,16 @@
-# Task 1 Optimization Workspace
+# Task 1 — Optimization
 
-Centralized Task 1 assets for optimization, routing, and warehouse operation simulations.
+Task 1 contains warehouse optimization notebooks, grid/routing logic, and the configuration files used to build warehouse floors and movement constraints.
 
-## Folder layout
+## Contents
 
-- `Optimization_Agents.ipynb` (main optimization pipeline + benchmark/advanced demos)
-- `ground_floor_operation_picking.ipynb` (ground-floor / picking-focused operations)
-- `Warehouse_Grid_Model_Explained.ipynb` (grid model and routing logic)
-- `Warehouse_Grid_Model_Explained_with_Tests.ipynb` (grid model with validation checks)
-- `config/` (floor/connectors/slot region configs)
-- `warehouse/` (grid, loader, occupancy, export utilities)
-- `Data/` (input datasets used by notebooks)
-- `detailed_methodology_all_notebooks_2026-02-14.txt` (formulas, assumptions, rationale)
+- `Optimization_Agents.ipynb`: main optimization workflow and experiments.
+- `ground_floor_operation_picking.ipynb`: picking-focused floor operation workflow.
+- `Warehouse_Grid_Model_Explained.ipynb`: warehouse grid model walkthrough.
+- `Warehouse_Grid_Model_Explained_with_Tests.ipynb`: same grid model with extra validation cells.
+- `config/`: floor layouts, connectors, and slot region mappings.
+- `warehouse/`: core Python modules (`grid`, `loader`, `occupancy`, `export`, `types`).
+- `Data/`: input files used by Task 1 notebooks.
 
 ## Canonical notebook paths
 
@@ -20,23 +19,22 @@ Centralized Task 1 assets for optimization, routing, and warehouse operation sim
 - `ai/task1/optimization/Warehouse_Grid_Model_Explained.ipynb`
 - `ai/task1/optimization/Warehouse_Grid_Model_Explained_with_Tests.ipynb`
 
-## Quick run commands
+## Run Task 1 inference
 
 From repository root:
 
 - `python submission/Task1/infer_task1.py --output-dir submission/outputs/task1`
-- `python submission/Task2/infer_task2.py --output-dir submission/outputs/task2`
 
-## Notebook verification commands
+## Verify notebooks (execute all)
 
-Run all optimization notebooks and save executed copies:
+From repository root:
 
 - `python -m jupyter nbconvert --to notebook --execute "ai/task1/optimization/Optimization_Agents.ipynb" --output "Optimization_Agents.executed.ipynb" --output-dir "submission/outputs/verify"`
 - `python -m jupyter nbconvert --to notebook --execute "ai/task1/optimization/ground_floor_operation_picking.ipynb" --output "ground_floor_operation_picking.executed.ipynb" --output-dir "submission/outputs/verify"`
 - `python -m jupyter nbconvert --to notebook --execute "ai/task1/optimization/Warehouse_Grid_Model_Explained.ipynb" --output "Warehouse_Grid_Model_Explained.executed.ipynb" --output-dir "submission/outputs/verify"`
 - `python -m jupyter nbconvert --to notebook --execute "ai/task1/optimization/Warehouse_Grid_Model_Explained_with_Tests.ipynb" --output "Warehouse_Grid_Model_Explained_with_Tests.executed.ipynb" --output-dir "submission/outputs/verify"`
 
-## Notes
+## Troubleshooting
 
-- Submission scripts in `submission/Task1` and `submission/Task2` already point to these canonical paths.
-- If any legacy references are found, replace them with the canonical paths listed above.
+- If a notebook fails with missing packages, install: `pip install nbformat nbclient jupyter ipykernel lightgbm openpyxl`.
+- If data/config file paths fail, keep notebook execution from repository root or update relative paths to canonical paths above.
