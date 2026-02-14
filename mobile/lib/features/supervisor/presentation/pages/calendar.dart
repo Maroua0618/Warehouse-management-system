@@ -8,6 +8,7 @@ import 'supervisor_dashboard.dart';
 import '../bon de préparation/Bon_de_préparation.dart';
 import '../bon de commande/bon_de_commande_screen.dart';
 import '../storage/storage_moves_page.dart';
+import '../picking_route/picking_tasks_screen.dart';
 
 class AIDecisionsEmptyScreen extends StatefulWidget {
   const AIDecisionsEmptyScreen({Key? key}) : super(key: key);
@@ -147,10 +148,15 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
             icon: Icons.route_outlined,
             title: 'Itinéraire de Prélèvement',
             subtitle: 'Optimal path optimization',
-            count: 0, // Not yet implemented
+            count: 2, // Updated count
             color: const Color(0xFF0891B2),
             onTap: () {
-              // Navigate to picking route
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PickingTasksScreen(),
+                ),
+              );
             },
           ),
         ],
