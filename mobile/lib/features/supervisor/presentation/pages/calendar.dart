@@ -9,6 +9,7 @@ import '../bon de préparation/Bon_de_préparation.dart';
 import '../bon de commande/bon_de_commande_screen.dart';
 import '../storage/storage_moves_page.dart';
 import '../picking_route/picking_tasks_screen.dart';
+import '../operational_monitor/operational_monitor_screen.dart';
 
 class AIDecisionsEmptyScreen extends StatefulWidget {
   const AIDecisionsEmptyScreen({Key? key}) : super(key: key);
@@ -83,10 +84,16 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
           builder: (context) => const SupervisorDashboardScreen(),
         ),
       );
+    } else if (index == 2) {
+      // Navigate to Map/Operational Monitor
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OperationalMonitorScreen(),
+        ),
+      );
     }
-    // Add other navigation cases as needed
     // index 1 = Calendar (current page)
-    // index 2 = Map
     // index 3 = Profile
   }
 
@@ -146,7 +153,7 @@ class _AIDecisionsEmptyScreenState extends State<AIDecisionsEmptyScreen> {
           const SizedBox(height: 12),
           _buildDecisionTypeCard(
             icon: Icons.route_outlined,
-            title: 'Itinéraire de Prélèvement',
+            title: 'Itinéraire Prélèvement',
             subtitle: 'Optimal path optimization',
             count: 2, // Updated count
             color: const Color(0xFF0891B2),

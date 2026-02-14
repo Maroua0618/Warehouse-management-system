@@ -4,6 +4,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'operational_issues.dart';
 import 'calendar.dart';
+import '../operational_monitor/operational_monitor_screen.dart';
 import '../bon de préparation/Bon_de_préparation.dart';
 import '../../data/repositories/supervisor_repository.dart';
 import '../../data/models/supervisor_models.dart';
@@ -126,10 +127,16 @@ class _SupervisorDashboardScreenState extends State<SupervisorDashboardScreen> {
         context,
         MaterialPageRoute(builder: (context) => const AIDecisionsEmptyScreen()),
       );
+    } else if (index == 2) {
+      // Navigate to Map/Operational Monitor
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const OperationalMonitorScreen(),
+        ),
+      );
     }
-    // Add other navigation cases as needed
     // index 0 = Dashboard (current page)
-    // index 2 = Map
     // index 3 = Profile
   }
 

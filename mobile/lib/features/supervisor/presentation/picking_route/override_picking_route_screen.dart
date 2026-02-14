@@ -1,75 +1,97 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../widgets/action_buttons.dart';
 import '../../data/models/picking_route_models.dart';
+import '../../logic/picking_route_cubit.dart';
+import '../../logic/picking_route_state.dart';
 
 /// Screen to override/view the optimized picking route
-class OverridePickingRouteScreen extends StatefulWidget {
+class OverridePickingRouteScreen extends StatelessWidget {
   final PickingTask pickingTask;
 
   const OverridePickingRouteScreen({Key? key, required this.pickingTask})
     : super(key: key);
 
   @override
-  State<OverridePickingRouteScreen> createState() =>
-      _OverridePickingRouteScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => PickingRouteCubit(originalTask: pickingTask),
+      child: const _OverridePickingRouteScreenContent(),
+    );
+  }
 }
 
-class _OverridePickingRouteScreenState
-    extends State<OverridePickingRouteScreen> {
-  late List<PickingLocation> _sequence;
-  late String _totalDistance;
-  late int _totalItems;
-
-  @override
-  void initState() {
-    super.initState();
-    final route =
-        widget.pickingTask.route ??
-        PickingRoute(
-          deliveryId: widget.pickingTask.deliveryId,
-          sequence: [],
-          totalDistance: '0m',
-          totalItems: 0,
-        );
-    _sequence = List.from(route.sequence);
-    _totalDistance = route.totalDistance;
-    _totalItems = route.totalItems;
-  }
+class _OverridePickingRouteScreenContent extends StatelessWidget {
+  const _OverridePickingRouteScreenContent({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildDeliveryInfoCard(),
-                    const SizedBox(height: 16),
-                    _buildPickingSequenceCard(),
-                    const SizedBox(height: 16),
-                    _buildMetricsCard(),
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
+    return BlocListener<PickingRouteCubit, PickingRouteState>(
+      listener: (context, state) {
+        if (state is PickingRouteSaved) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.success,
             ),
-            _buildBottomActions(),
-          ],
+          );
+          Navigator.pop(context);
+        } else if (state is PickingRouteError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.failure,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: BlocBuilder<PickingRouteCubit, PickingRouteState>(
+            builder: (context, state) {
+              if (state is PickingRouteLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF0891B2)),
+                );
+              }
+
+              if (state is! PickingRouteLoaded) {
+                return const SizedBox.shrink();
+              }
+
+              return Column(
+                children: [
+                  _buildHeader(context),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDeliveryInfoCard(context),
+                          const SizedBox(height: 16),
+                          _buildPickingSequenceCard(context, state),
+                          const SizedBox(height: 16),
+                          _buildMetricsCard(context, state),
+                          const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _buildBottomActions(context, state),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -102,7 +124,9 @@ class _OverridePickingRouteScreenState
     );
   }
 
-  Widget _buildDeliveryInfoCard() {
+  Widget _buildDeliveryInfoCard(BuildContext context) {
+    final cubit = context.read<PickingRouteCubit>();
+    final task = cubit.originalTask;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -130,7 +154,7 @@ class _OverridePickingRouteScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.pickingTask.deliveryId,
+                  task.deliveryId,
                   style: AppTextStyles.cardTitle.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -139,7 +163,7 @@ class _OverridePickingRouteScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.pickingTask.pathType,
+                  task.pathType,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -152,7 +176,10 @@ class _OverridePickingRouteScreenState
     );
   }
 
-  Widget _buildPickingSequenceCard() {
+  Widget _buildPickingSequenceCard(
+    BuildContext context,
+    PickingRouteLoaded state,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -186,7 +213,7 @@ class _OverridePickingRouteScreenState
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: _showAddLocationDialog,
+                  onPressed: () => _showAddLocationDialog(context),
                   icon: Icon(Icons.add, size: 18, color: AppColors.primary),
                   label: Text(
                     'Ajouter',
@@ -212,19 +239,21 @@ class _OverridePickingRouteScreenState
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _sequence.length,
+            itemCount: state.sequence.length,
             separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
-              final location = _sequence[index];
+              final location = state.sequence[index];
               final isFirst = index == 0;
-              final isLast = index == _sequence.length - 1;
+              final isLast = index == state.sequence.length - 1;
 
               return _buildSequenceItem(
+                context: context,
                 location: location,
                 index: index,
                 position: index + 1,
                 isFirst: isFirst,
                 isLast: isLast,
+                totalLength: state.sequence.length,
               );
             },
           ),
@@ -234,11 +263,13 @@ class _OverridePickingRouteScreenState
   }
 
   Widget _buildSequenceItem({
+    required BuildContext context,
     required PickingLocation location,
     required int index,
     required int position,
     required bool isFirst,
     required bool isLast,
+    required int totalLength,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -309,19 +340,23 @@ class _OverridePickingRouteScreenState
                     color: AppColors.textSecondary,
                     size: 18,
                   ),
-                  onPressed: () => _moveLocation(index, index - 1),
+                  onPressed: () => context
+                      .read<PickingRouteCubit>()
+                      .moveLocation(index, index - 1),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32),
                 ),
               // Move down button
-              if (index < _sequence.length - 1)
+              if (index < totalLength - 1)
                 IconButton(
                   icon: Icon(
                     Icons.arrow_downward,
                     color: AppColors.textSecondary,
                     size: 18,
                   ),
-                  onPressed: () => _moveLocation(index, index + 1),
+                  onPressed: () => context
+                      .read<PickingRouteCubit>()
+                      .moveLocation(index, index + 1),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32),
                 ),
@@ -332,19 +367,21 @@ class _OverridePickingRouteScreenState
                   color: AppColors.primary,
                   size: 20,
                 ),
-                onPressed: () => _showEditLocationDialog(index, location),
+                onPressed: () =>
+                    _showEditLocationDialog(context, index, location),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32),
               ),
               // Delete button
-              if (_sequence.length > 2)
+              if (totalLength > 2)
                 IconButton(
                   icon: Icon(
                     Icons.delete_outline,
                     color: AppColors.failure,
                     size: 20,
                   ),
-                  onPressed: () => _deleteLocation(index),
+                  onPressed: () =>
+                      context.read<PickingRouteCubit>().deleteLocation(index),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32),
                 ),
@@ -355,21 +392,11 @@ class _OverridePickingRouteScreenState
     );
   }
 
-  void _moveLocation(int fromIndex, int toIndex) {
-    setState(() {
-      final location = _sequence.removeAt(fromIndex);
-      _sequence.insert(toIndex, location);
-    });
-  }
-
-  void _deleteLocation(int index) {
-    setState(() {
-      _sequence.removeAt(index);
-      _totalItems = _sequence.length;
-    });
-  }
-
-  void _showEditLocationDialog(int index, PickingLocation location) {
+  void _showEditLocationDialog(
+    BuildContext context,
+    int index,
+    PickingLocation location,
+  ) {
     final codeController = TextEditingController(text: location.code);
     final positionController = TextEditingController(
       text: location.warehousePosition,
@@ -377,10 +404,11 @@ class _OverridePickingRouteScreenState
     final distanceController = TextEditingController(
       text: location.estimatedDistance,
     );
+    final cubit = context.read<PickingRouteCubit>();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
           'Modifier l\'Emplacement',
           style: AppTextStyles.sectionHeader.copyWith(
@@ -463,21 +491,22 @@ class _OverridePickingRouteScreenState
         actions: [
           SecondaryButton(
             label: 'Annuler',
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             borderRadius: 8,
           ),
           PrimaryButton(
             label: 'Enregistrer',
             onPressed: () {
-              setState(() {
-                _sequence[index] = PickingLocation(
+              cubit.updateLocation(
+                index,
+                PickingLocation(
                   code: codeController.text,
                   warehousePosition: positionController.text,
                   estimatedDistance: distanceController.text,
-                );
-              });
-              Navigator.pop(context);
+                ),
+              );
+              Navigator.pop(dialogContext);
             },
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             borderRadius: 8,
@@ -487,14 +516,15 @@ class _OverridePickingRouteScreenState
     );
   }
 
-  void _showAddLocationDialog() {
+  void _showAddLocationDialog(BuildContext context) {
     final codeController = TextEditingController();
     final positionController = TextEditingController();
     final distanceController = TextEditingController();
+    final cubit = context.read<PickingRouteCubit>();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
           'Ajouter un Emplacement',
           style: AppTextStyles.sectionHeader.copyWith(
@@ -577,7 +607,7 @@ class _OverridePickingRouteScreenState
         actions: [
           SecondaryButton(
             label: 'Annuler',
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             borderRadius: 8,
           ),
@@ -586,19 +616,16 @@ class _OverridePickingRouteScreenState
             onPressed: () {
               if (codeController.text.isNotEmpty &&
                   positionController.text.isNotEmpty) {
-                setState(() {
-                  _sequence.add(
-                    PickingLocation(
-                      code: codeController.text,
-                      warehousePosition: positionController.text,
-                      estimatedDistance: distanceController.text.isEmpty
-                          ? '0m'
-                          : distanceController.text,
-                    ),
-                  );
-                  _totalItems = _sequence.length;
-                });
-                Navigator.pop(context);
+                cubit.addLocation(
+                  PickingLocation(
+                    code: codeController.text,
+                    warehousePosition: positionController.text,
+                    estimatedDistance: distanceController.text.isEmpty
+                        ? '0m'
+                        : distanceController.text,
+                  ),
+                );
+                Navigator.pop(dialogContext);
               }
             },
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -609,7 +636,7 @@ class _OverridePickingRouteScreenState
     );
   }
 
-  Widget _buildMetricsCard() {
+  Widget _buildMetricsCard(BuildContext context, PickingRouteLoaded state) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -636,7 +663,7 @@ class _OverridePickingRouteScreenState
                 child: _buildMetricItem(
                   icon: Icons.straighten_outlined,
                   label: 'Distance Totale',
-                  value: _totalDistance,
+                  value: state.totalDistance,
                   color: AppColors.primary,
                 ),
               ),
@@ -645,7 +672,7 @@ class _OverridePickingRouteScreenState
                 child: _buildMetricItem(
                   icon: Icons.inventory_2_outlined,
                   label: 'Articles',
-                  value: '$_totalItems',
+                  value: '${state.totalItems}',
                   color: const Color(0xFF10B981),
                 ),
               ),
@@ -695,7 +722,7 @@ class _OverridePickingRouteScreenState
     );
   }
 
-  Widget _buildBottomActions() {
+  Widget _buildBottomActions(BuildContext context, PickingRouteLoaded state) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -717,16 +744,7 @@ class _OverridePickingRouteScreenState
           PrimaryButton(
             label: 'Confirmer l\'Itinéraire Manuel',
             icon: Icons.check,
-            onPressed: () {
-              // TODO: Save to Supabase
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Itinéraire manuel confirmé avec succès'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-              Navigator.pop(context);
-            },
+            onPressed: () => context.read<PickingRouteCubit>().saveRoute(),
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             borderRadius: 8,
@@ -734,22 +752,8 @@ class _OverridePickingRouteScreenState
           const SizedBox(height: 12),
           SecondaryButton(
             label: 'Réinitialiser à l\'IA',
-            onPressed: () {
-              setState(() {
-                final route = widget.pickingTask.route;
-                if (route != null) {
-                  _sequence = List.from(route.sequence);
-                  _totalDistance = route.totalDistance;
-                  _totalItems = route.totalItems;
-                }
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Itinéraire réinitialisé à l\'optimisation IA'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
+            onPressed: () =>
+                context.read<PickingRouteCubit>().resetToAIOptimization(),
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             borderRadius: 8,

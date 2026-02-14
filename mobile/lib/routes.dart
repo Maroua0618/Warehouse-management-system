@@ -13,6 +13,7 @@ class AppRoutes {
   static const String supervisor = '/supervisor';
   static const String bonDeCommande = '/bon-de-commande';
   static const String pickingTasks = '/picking-tasks';
+  static const String operationalMonitor = '/operational-monitor';
 
   static Map<String, WidgetBuilder> get routes {
     return {
