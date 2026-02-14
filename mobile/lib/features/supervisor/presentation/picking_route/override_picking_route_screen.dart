@@ -18,12 +18,14 @@ class OverridePickingRouteScreen extends StatefulWidget {
 
 class _OverridePickingRouteScreenState
     extends State<OverridePickingRouteScreen> {
-  late PickingRoute _route;
+  late List<PickingLocation> _sequence;
+  late String _totalDistance;
+  late int _totalItems;
 
   @override
   void initState() {
     super.initState();
-    _route =
+    final route =
         widget.pickingTask.route ??
         PickingRoute(
           deliveryId: widget.pickingTask.deliveryId,
@@ -31,6 +33,9 @@ class _OverridePickingRouteScreenState
           totalDistance: '0m',
           totalItems: 0,
         );
+    _sequence = List.from(route.sequence);
+    _totalDistance = route.totalDistance;
+    _totalItems = route.totalItems;
   }
 
   @override
@@ -84,7 +89,7 @@ class _OverridePickingRouteScreenState
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Override Route',
+              'Modifier l\'Itinéraire',
               style: AppTextStyles.screenTitle.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 18,
@@ -171,7 +176,7 @@ class _OverridePickingRouteScreenState
                 Icon(Icons.route, color: AppColors.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'PICKING SEQUENCE',
+                  'Séquence Préventive',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -180,11 +185,23 @@ class _OverridePickingRouteScreenState
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${_route.sequence.length} stops, ${_route.totalDistance}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+                TextButton.icon(
+                  onPressed: _showAddLocationDialog,
+                  icon: Icon(Icons.add, size: 18, color: AppColors.primary),
+                  label: Text(
+                    'Ajouter',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
               ],
@@ -195,15 +212,16 @@ class _OverridePickingRouteScreenState
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _route.sequence.length,
+            itemCount: _sequence.length,
             separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
-              final location = _route.sequence[index];
+              final location = _sequence[index];
               final isFirst = index == 0;
-              final isLast = index == _route.sequence.length - 1;
+              final isLast = index == _sequence.length - 1;
 
               return _buildSequenceItem(
                 location: location,
+                index: index,
                 position: index + 1,
                 isFirst: isFirst,
                 isLast: isLast,
@@ -217,6 +235,7 @@ class _OverridePickingRouteScreenState
 
   Widget _buildSequenceItem({
     required PickingLocation location,
+    required int index,
     required int position,
     required bool isFirst,
     required bool isLast,
@@ -278,14 +297,312 @@ class _OverridePickingRouteScreenState
             ),
           ),
 
-          // Edit button
-          IconButton(
-            icon: Icon(Icons.edit_outlined, color: AppColors.primary, size: 20),
+          // Action buttons
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Move up button
+              if (index > 0)
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_upward,
+                    color: AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  onPressed: () => _moveLocation(index, index - 1),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32),
+                ),
+              // Move down button
+              if (index < _sequence.length - 1)
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_downward,
+                    color: AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  onPressed: () => _moveLocation(index, index + 1),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32),
+                ),
+              // Edit button
+              IconButton(
+                icon: Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                onPressed: () => _showEditLocationDialog(index, location),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32),
+              ),
+              // Delete button
+              if (_sequence.length > 2)
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: AppColors.failure,
+                    size: 20,
+                  ),
+                  onPressed: () => _deleteLocation(index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _moveLocation(int fromIndex, int toIndex) {
+    setState(() {
+      final location = _sequence.removeAt(fromIndex);
+      _sequence.insert(toIndex, location);
+    });
+  }
+
+  void _deleteLocation(int index) {
+    setState(() {
+      _sequence.removeAt(index);
+      _totalItems = _sequence.length;
+    });
+  }
+
+  void _showEditLocationDialog(int index, PickingLocation location) {
+    final codeController = TextEditingController(text: location.code);
+    final positionController = TextEditingController(
+      text: location.warehousePosition,
+    );
+    final distanceController = TextEditingController(
+      text: location.estimatedDistance,
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Modifier l\'Emplacement',
+          style: AppTextStyles.sectionHeader.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Code',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: codeController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: A1-92',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Position d\'Entrepôt',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: positionController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: North End',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Distance Estimée',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: distanceController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: 312m',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          SecondaryButton(
+            label: 'Annuler',
+            onPressed: () => Navigator.pop(context),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            borderRadius: 8,
+          ),
+          PrimaryButton(
+            label: 'Enregistrer',
             onPressed: () {
-              // TODO: Implement edit location
+              setState(() {
+                _sequence[index] = PickingLocation(
+                  code: codeController.text,
+                  warehousePosition: positionController.text,
+                  estimatedDistance: distanceController.text,
+                );
+              });
+              Navigator.pop(context);
             },
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            borderRadius: 8,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddLocationDialog() {
+    final codeController = TextEditingController();
+    final positionController = TextEditingController();
+    final distanceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Ajouter un Emplacement',
+          style: AppTextStyles.sectionHeader.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Code',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: codeController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: A1-92',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Position d\'Entrepôt',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: positionController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: North End',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Distance Estimée',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: distanceController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: 312m',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          SecondaryButton(
+            label: 'Annuler',
+            onPressed: () => Navigator.pop(context),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            borderRadius: 8,
+          ),
+          PrimaryButton(
+            label: 'Ajouter',
+            onPressed: () {
+              if (codeController.text.isNotEmpty &&
+                  positionController.text.isNotEmpty) {
+                setState(() {
+                  _sequence.add(
+                    PickingLocation(
+                      code: codeController.text,
+                      warehousePosition: positionController.text,
+                      estimatedDistance: distanceController.text.isEmpty
+                          ? '0m'
+                          : distanceController.text,
+                    ),
+                  );
+                  _totalItems = _sequence.length;
+                });
+                Navigator.pop(context);
+              }
+            },
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            borderRadius: 8,
           ),
         ],
       ),
@@ -304,7 +621,7 @@ class _OverridePickingRouteScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'METRICS',
+            'MÉTRIQUES',
             style: AppTextStyles.labelMedium.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w700,
@@ -318,8 +635,8 @@ class _OverridePickingRouteScreenState
               Expanded(
                 child: _buildMetricItem(
                   icon: Icons.straighten_outlined,
-                  label: 'Total Distance',
-                  value: _route.totalDistance,
+                  label: 'Distance Totale',
+                  value: _totalDistance,
                   color: AppColors.primary,
                 ),
               ),
@@ -327,8 +644,8 @@ class _OverridePickingRouteScreenState
               Expanded(
                 child: _buildMetricItem(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Items',
-                  value: '${_route.totalItems}',
+                  label: 'Articles',
+                  value: '$_totalItems',
                   color: const Color(0xFF10B981),
                 ),
               ),
@@ -398,10 +715,16 @@ class _OverridePickingRouteScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryButton(
-            label: 'Confirm Manual Route',
+            label: 'Confirmer l\'Itinéraire Manuel',
             icon: Icons.check,
             onPressed: () {
-              // TODO: Implement confirm manual route
+              // TODO: Save to Supabase
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Itinéraire manuel confirmé avec succès'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
               Navigator.pop(context);
             },
             width: double.infinity,
@@ -410,9 +733,22 @@ class _OverridePickingRouteScreenState
           ),
           const SizedBox(height: 12),
           SecondaryButton(
-            label: 'Reset to AI Optimization',
+            label: 'Réinitialiser à l\'IA',
             onPressed: () {
-              // TODO: Implement reset to AI optimization
+              setState(() {
+                final route = widget.pickingTask.route;
+                if (route != null) {
+                  _sequence = List.from(route.sequence);
+                  _totalDistance = route.totalDistance;
+                  _totalItems = route.totalItems;
+                }
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Itinéraire réinitialisé à l\'optimisation IA'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
             },
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),

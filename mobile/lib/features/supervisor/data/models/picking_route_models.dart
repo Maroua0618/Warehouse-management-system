@@ -1,5 +1,20 @@
 // Models for Picking Route (Itinéraire de Prélèvement)
 
+/// Represents a picking step in the sequence
+class PickingStep {
+  final int stepNumber;
+  final String sku;
+  final String location;
+
+  PickingStep({
+    required this.stepNumber,
+    required this.sku,
+    required this.location,
+  });
+
+  String get formattedStep => '$sku → $location';
+}
+
 /// Represents a worker that can be assigned to picking tasks
 class Worker {
   final String id;
@@ -73,6 +88,10 @@ class PickingTask {
   final String? assignedEquipment;
   final String status; // 'pending', 'assigned', 'in_progress', 'completed'
   final PickingRoute? route;
+  final List<PickingStep> steps;
+  final String destinationRack;
+  final String optimizedDistance;
+  final int optimizedStops;
 
   PickingTask({
     required this.deliveryId,
@@ -86,6 +105,10 @@ class PickingTask {
     this.assignedEquipment,
     this.status = 'pending',
     this.route,
+    this.steps = const [],
+    this.destinationRack = '',
+    this.optimizedDistance = '0m',
+    this.optimizedStops = 0,
   });
 
   PickingTask copyWith({
@@ -100,6 +123,10 @@ class PickingTask {
     String? assignedEquipment,
     String? status,
     PickingRoute? route,
+    List<PickingStep>? steps,
+    String? destinationRack,
+    String? optimizedDistance,
+    int? optimizedStops,
   }) {
     return PickingTask(
       deliveryId: deliveryId ?? this.deliveryId,
@@ -113,6 +140,10 @@ class PickingTask {
       assignedEquipment: assignedEquipment ?? this.assignedEquipment,
       status: status ?? this.status,
       route: route ?? this.route,
+      steps: steps ?? this.steps,
+      destinationRack: destinationRack ?? this.destinationRack,
+      optimizedDistance: optimizedDistance ?? this.optimizedDistance,
+      optimizedStops: optimizedStops ?? this.optimizedStops,
     );
   }
 }

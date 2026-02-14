@@ -120,7 +120,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Assign Picking Task',
+              'Assigner la Tâche',
               style: AppTextStyles.screenTitle.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 18,
@@ -242,7 +242,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'SELECT ROUTE',
+          'SÉLECTIONNER L\'ITINÉRAIRE',
           style: AppTextStyles.labelMedium.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -255,7 +255,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
           children: [
             Expanded(
               child: _buildRouteOption(
-                label: 'AI Optimized',
+                label: 'IA Optimisée',
                 isSelected: true,
                 icon: Icons.psychology_outlined,
               ),
@@ -263,7 +263,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildRouteOption(
-                label: 'Manual',
+                label: 'Manuel',
                 isSelected: false,
                 icon: Icons.edit_road_outlined,
               ),
@@ -326,7 +326,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'SELECT WORKER',
+          'SÉLECTIONNER UN TRAVAILLEUR',
           style: AppTextStyles.labelMedium.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -436,7 +436,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ASSIGN EQUIPMENT',
+          'ASSIGNER L\'ÉQUIPEMENT',
           style: AppTextStyles.labelMedium.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -545,7 +545,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryButton(
-            label: 'Confirm & Dispatch',
+            label: 'Confirmer & Envoyer',
             icon: Icons.check,
             onPressed: canConfirm
                 ? () {
@@ -558,7 +558,7 @@ class _AssignPickingTaskScreenState extends State<AssignPickingTaskScreen> {
           ),
           const SizedBox(height: 12),
           SecondaryButton(
-            label: 'Cancel Changes',
+            label: 'Annuler les Modifications',
             onPressed: () {
               Navigator.pop(context);
             },
