@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../../core/config/api_config.dart';
 import '../models/storage_move_models.dart';
 
+/// Storage Move Repository - Updated to match new backend API
+/// Backend uses: operation_tasks (operation_type='STORAGE'), ai_recommendations, override_decisions
 class StorageMoveRepository {
-  final String baseUrl;
   final String? authToken;
+  final String? currentUserId;
 
-  StorageMoveRepository({required this.baseUrl, this.authToken});
+  StorageMoveRepository({this.authToken, this.currentUserId});
 
   // Headers for API requests
   Map<String, String> get _headers => {
@@ -14,18 +17,14 @@ class StorageMoveRepository {
     if (authToken != null) 'Authorization': 'Bearer $authToken',
   };
 
-  /// Fetch all storage moves
-  Future<List<StorageMove>> fetchStorageMoves({
-    TaskStatus? status,
-    PriorityLevel? priority,
-  }) async {
+  /// Fetch all storage moves (tasks)
+  Future<List<StorageMove>> fetchStorageMoves({TaskStatus? status}) async {
     try {
       final queryParams = <String, String>{};
       if (status != null) queryParams['status'] = status.toJson();
-      if (priority != null) queryParams['priority'] = priority.toJson();
 
       final uri = Uri.parse(
-        '$baseUrl/storage-moves',
+        '${ApiConfig.baseUrl}${ApiConfig.storageMoves}',
       ).replace(queryParameters: queryParams);
 
       final response = await http.get(uri, headers: _headers);
@@ -41,47 +40,88 @@ class StorageMoveRepository {
     }
   }
 
-  /// Fetch a single storage move by ID
-  Future<StorageMove> fetchStorageMoveById(String id) async {
+  /// Create a new storage move task
+  Future<StorageMove> createStorageMove({
+    required String orderId,
+    required String skuId,
+    required String fromLocationId,
+    required String toLocationId,
+    required int quantity,
+    PriorityLevel priority = PriorityLevel.MEDIUM,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl/storage-moves/$id');
-      final response = await http.get(uri, headers: _headers);
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}${ApiConfig.storageMoves}',
+      ).replace(queryParameters: {'user_id': currentUserId ?? ''});
+
+      final body = json.encode({
+        'order_id': orderId,
+        'sku_id': skuId,
+        'from_location_id': fromLocationId,
+        'to_location_id': toLocationId,
+        'quantity': quantity,
+        'priority': priority.toJson(),
+      });
+
+      final response = await http.post(uri, headers: _headers, body: body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return StorageMove.fromJson(json.decode(response.body));
+      } else {
+        throw Exception(
+          'Failed to create storage move: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error creating storage move: $e');
+    }
+  }
+
+  /// Update storage move (status, assignment, etc.)
+  Future<StorageMove> updateStorageMove({
+    required String taskId,
+    TaskStatus? status,
+    String? assignedToUserId,
+    String? chariotId,
+    String? toLocationId,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}${ApiConfig.storageMoves}/$taskId',
+      ).replace(queryParameters: {'user_id': currentUserId ?? ''});
+
+      final body = json.encode({
+        if (status != null) 'status': status.toJson(),
+        if (assignedToUserId != null) 'assigned_to_user_id': assignedToUserId,
+        if (chariotId != null) 'chariot_id': chariotId,
+        if (toLocationId != null) 'to_location_id': toLocationId,
+      });
+
+      final response = await http.put(uri, headers: _headers, body: body);
 
       if (response.statusCode == 200) {
         return StorageMove.fromJson(json.decode(response.body));
       } else {
-        throw Exception('Failed to load storage move: ${response.statusCode}');
+        throw Exception(
+          'Failed to update storage move: ${response.statusCode}',
+        );
       }
     } catch (e) {
-      throw Exception('Error fetching storage move: $e');
+      throw Exception('Error updating storage move: $e');
     }
   }
 
-  /// Fetch available employees for assignment
-  Future<List<Employee>> fetchAvailableEmployees() async {
-    try {
-      final uri = Uri.parse('$baseUrl/employees/available');
-      final response = await http.get(uri, headers: _headers);
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Employee.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load employees: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error fetching employees: $e');
-    }
-  }
-
-  /// Assign a storage move to an employee
+  /// Assign storage task to employee
   Future<StorageMove> assignStorageMove({
-    required String moveId,
+    required String taskId,
     required String employeeId,
     String? chariotId,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/storage-moves/$moveId/assign');
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}${ApiConfig.storageMoves}/$taskId/assign',
+      );
+
       final body = json.encode({
         'employee_id': employeeId,
         if (chariotId != null) 'chariot_id': chariotId,
@@ -101,46 +141,53 @@ class StorageMoveRepository {
     }
   }
 
-  /// Fetch alternative locations for override
-  Future<List<Location>> fetchAlternativeLocations({
-    required String moveId,
+  /// Get AI recommendation for storage location
+  Future<AIRecommendation> getAIRecommendation({
+    required String skuId,
+    required int quantity,
+    String? abcClass,
   }) async {
     try {
       final uri = Uri.parse(
-        '$baseUrl/storage-moves/$moveId/alternative-locations',
-      );
-      final response = await http.get(uri, headers: _headers);
+        '${ApiConfig.baseUrl}${ApiConfig.storageMoves}/ai/recommend',
+      ).replace(queryParameters: {'user_id': currentUserId ?? ''});
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Location.fromJson(json)).toList();
+      final body = json.encode({
+        'sku_id': skuId,
+        'quantity': quantity,
+        if (abcClass != null) 'abc_class': abcClass,
+      });
+
+      final response = await http.post(uri, headers: _headers, body: body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return AIRecommendation.fromJson(json.decode(response.body));
       } else {
         throw Exception(
-          'Failed to load alternative locations: ${response.statusCode}',
+          'Failed to get AI recommendation: ${response.statusCode}',
         );
       }
     } catch (e) {
-      throw Exception('Error fetching alternative locations: $e');
+      throw Exception('Error getting AI recommendation: $e');
     }
   }
 
-  /// Override AI recommendation
+  /// Override AI recommendation (human decision)
   Future<OverrideDecision> overrideRecommendation({
     required String recommendationId,
     required String newDestinationId,
-    required int newQuantity,
     required String justification,
-    required String userId,
   }) async {
     try {
       final uri = Uri.parse(
-        '$baseUrl/ai-recommendations/$recommendationId/override',
+        '${ApiConfig.baseUrl}${ApiConfig.storageMoves}/ai/override',
       );
+
       final body = json.encode({
+        'recommendation_id': recommendationId,
         'new_destination_id': newDestinationId,
-        'new_quantity': newQuantity,
+        'user_id': currentUserId ?? '',
         'justification': justification,
-        'user_id': userId,
       });
 
       final response = await http.post(uri, headers: _headers, body: body);
@@ -157,63 +204,22 @@ class StorageMoveRepository {
     }
   }
 
-  /// Update storage move status
-  Future<StorageMove> updateStorageMoveStatus({
-    required String moveId,
-    required TaskStatus status,
+  /// Complete storage move (mark as completed)
+  Future<StorageMove> completeStorageMove({
+    required String taskId,
+    required String toLocationId,
   }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/storage-moves/$moveId/status');
-      final body = json.encode({'status': status.toJson()});
-
-      final response = await http.patch(uri, headers: _headers, body: body);
-
-      if (response.statusCode == 200) {
-        return StorageMove.fromJson(json.decode(response.body));
-      } else {
-        throw Exception(
-          'Failed to update storage move status: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      throw Exception('Error updating storage move status: $e');
-    }
+    return updateStorageMove(
+      taskId: taskId,
+      status: TaskStatus.COMPLETED,
+      toLocationId: toLocationId,
+    );
   }
 
-  /// Complete a storage move
-  Future<StorageMove> completeStorageMove({required String moveId}) async {
+  /// Cancel storage move
+  Future<void> cancelStorageMove({required String taskId}) async {
     try {
-      final uri = Uri.parse('$baseUrl/storage-moves/$moveId/complete');
-      final response = await http.post(uri, headers: _headers);
-
-      if (response.statusCode == 200) {
-        return StorageMove.fromJson(json.decode(response.body));
-      } else {
-        throw Exception(
-          'Failed to complete storage move: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      throw Exception('Error completing storage move: $e');
-    }
-  }
-
-  /// Cancel a storage move
-  Future<void> cancelStorageMove({
-    required String moveId,
-    required String reason,
-  }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/storage-moves/$moveId/cancel');
-      final body = json.encode({'reason': reason});
-
-      final response = await http.post(uri, headers: _headers, body: body);
-
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to cancel storage move: ${response.statusCode}',
-        );
-      }
+      await updateStorageMove(taskId: taskId, status: TaskStatus.CANCELLED);
     } catch (e) {
       throw Exception('Error cancelling storage move: $e');
     }

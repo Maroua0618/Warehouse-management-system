@@ -9,4 +9,20 @@ class ApiConfig {
   static const String dashboard = '/supervisor/dashboard';
   static const String recentActivity = '/supervisor/recent-activity';
   static const String operationalIssues = '/supervisor/operational-issues';
+
+  // Storage Moves endpoints
+  static const String storageMoves = '/supervisor/storage-moves';
+
+  // Picking Tasks endpoints
+  static const String pickingTasks = '/supervisor/picking-tasks';
+  static const String pickingWorkers = '/supervisor/picking-tasks/workers';
+  static const String pickingEquipment = '/supervisor/picking-tasks/equipment';
+
+  // Bon de Préparation endpoints
+  static const String bonDePreparation = '/supervisor/bon-de-preparation';
+
+  // Operational Monitor endpoints
+  static const String employeeTracking = '/supervisor/employee-tracking';
+  static const String operationalAlerts = '/supervisor/operational-alerts';
+  static const String operationalStats = '/supervisor/operational-stats';
 }
