@@ -310,6 +310,81 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                                   );
                                 },
                               ),
+                              const SizedBox(height: 20),
+
+                              // Demo credentials for jury
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: AppColors.primary.withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          size: 18,
+                                          color: AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Compte démo',
+                                          style: AppTextStyles.labelMedium
+                                              .copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Email: ',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                        ),
+                                        SelectableText(
+                                          'employee@test.com',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                color: AppColors.textPrimary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Mot de passe: ',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                        ),
+                                        SelectableText(
+                                          'test123',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                color: AppColors.textPrimary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
