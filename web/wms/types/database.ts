@@ -662,30 +662,71 @@ export type Database = {
           },
         ]
       }
+      user_invitations: {
+        Row: {
+          id: string
+          user_id: string
+          token: string
+          expires_at: string
+          accepted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token: string
+          expires_at: string
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token?: string
+          expires_at?: string
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           id: string
           name: string
-          password_hash: string
+          email: string | null
+          username: string
+          password_hash: string | null
           role: Database["public"]["Enums"]["role_type"]
           status: string
-          username: string
+          invited_at: string | null
         }
         Insert: {
           id?: string
           name: string
-          password_hash: string
+          email?: string | null
+          username: string
+          password_hash?: string | null
           role: Database["public"]["Enums"]["role_type"]
           status?: string
-          username: string
+          invited_at?: string | null
         }
         Update: {
           id?: string
           name?: string
-          password_hash?: string
+          email?: string | null
+          username?: string
+          password_hash?: string | null
           role?: Database["public"]["Enums"]["role_type"]
           status?: string
-          username?: string
+          invited_at?: string | null
         }
         Relationships: []
       }

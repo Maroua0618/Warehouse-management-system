@@ -1,40 +1,28 @@
-import type { Metadata } from "next";
-import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
-// import "../globals.css";
+"use client";
 
-// Your Design System Typography
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
+import React from 'react';
+import Sidebar from '../../components/dashboard/navbar';
+import Navbar from '../../components/dashboard/sidebar';
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-});
-
-export const metadata: Metadata = {
-  title: "MobAI BMS | Enterprise Admin",
-  description: "Advanced Warehouse Management System",
-};
-
-export default function RootLayout({
+export default function DashboardLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
+    <div className="min-h-screen bg-[#F1F4F9]">
+      {/* Fixed Sidebar */}
+      <Sidebar />
+
+      {/* Fixed Navbar */}
+      <Navbar />
+
+      {/* Scrollable Content — constrained between sidebar and screen edge */}
+      <main className="ml-64 pt-20">
+        <div className="p-8 max-w-[calc(100vw-16rem)] overflow-hidden">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }
