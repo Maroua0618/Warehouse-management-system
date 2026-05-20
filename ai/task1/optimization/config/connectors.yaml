@@ -1,0 +1,28 @@
+# connectors.yaml — Vertical connector definitions
+# ─────────────────────────────────────────────────
+# Each entry describes a physical connector (monte-charge only).
+# Each connector lists where it appears on each floor as [row, col].
+#
+# IMPORTANT: ONLY monte-charge connectors (mc1, mc2) are used for
+# vertical travel. The ascenseur is NOT an elevator and must NOT
+# create vertical edges.
+#
+# All four floors must be listed for a connector to enable full
+# vertical travel.
+
+connectors:
+  - id: mc1
+    positions:
+      "1": [4, 11]
+      "2": [4, 11]
+      "3": [4, 11]
+      "4": [4, 11]
+    vertical_cost_per_floor: 7.0
+
+  - id: mc2
+    positions:
+      "1": [4, 20]
+      "2": [4, 20]
+      "3": [4, 20]
+      "4": [4, 20]
+    vertical_cost_per_floor: 7.0
