@@ -1,0 +1,24 @@
+# floors.yaml — Global warehouse grid configuration (floors 1–4 only)
+# ────────────────────────────────────────────────────────────────
+# Resolution: 1 cell = 1m × 1m (so each cell is 1m²).
+# Floors 1 & 2 share one plan; floors 3 & 4 share another plan.
+
+# Extra cost added when a pathfinder traverses an empty STORAGE cell.
+# Encourages routing through corridors while still allowing cuts through
+# vacant slots (Policy C).
+storage_penalty: 2.0
+
+# Default vertical cost per floor delta (used if a connector does not
+# define its own vertical_cost_per_floor). In our setup, mc1/mc2 define
+# vertical_cost_per_floor explicitly in connectors.yaml.
+vertical_cost_per_floor: 7.0
+
+# Map ASCII characters in your plan strings to CONNECTOR IDs.
+# We ONLY use monte-charge connectors for vertical travel.
+connector_symbols:
+  M: mc1
+  N: mc2
+
+# OPTIONAL (if you also want to mark the ascenseur area in ASCII maps):
+# - 'A' can be used in your ASCII plan to represent the ascenseur footprint,
+#   but it must be treated as OBSTACLE or VOID and must NOT create vertical links.
