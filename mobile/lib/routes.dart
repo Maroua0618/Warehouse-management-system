@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'injection_container.dart';
 import 'features/shared/presentation/pages/splash.dart';
 import 'features/shared/presentation/pages/onboarding.dart';
 import 'features/shared/presentation/pages/login.dart';
-import 'features/employee/presentation/pages/employee_dashboard.dart';
+import 'features/employee/presentation/pages/employee.dart';
+import 'features/employee/logic/cubit.dart';
+import 'features/employee/presentation/cubit/mock_order_cubit.dart';
 import 'features/supervisor/presentation/pages/supervisor_dashboard.dart';
 
 class AppRoutes {
@@ -19,8 +23,20 @@ class AppRoutes {
     return {
       splash: (context) => const SplashScreen(),
       onboarding: (context) => const OnboardingScreen(),
+      // Login page - uses Supabase auth directly
       login: (context) => const LoginPage(),
-      employee: (context) => const EmployeeDashboard(),
+      // Employee dashboard with all required cubits
+      employee: (context) => MultiBlocProvider(
+        providers: [
+          BlocProvider<EmployeeCubit>(
+            create: (context) {
+              return sl<EmployeeCubit>()..initialize();
+            },
+          ),
+          BlocProvider<MockOrderCubit>(create: (context) => MockOrderCubit()),
+        ],
+        child: const EmployeeDashboard(),
+      ),
       supervisor: (context) => const SupervisorDashboardScreen(),
     };
   }
